@@ -1,0 +1,17 @@
+.gradle/
+.idea/
+.tools/
+.keystore/
+keystore.properties
+local.properties
+build/
+**/build/
+captures/
+.DS_Store
+*.apk
+*.aab
+.analysis/
+.builds/
+.codex-tools/
+RecoveredUnityProject/
+unity-*.log

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="hawk_icon_bg_start">#FFFFFF</color>
+    <color name="hawk_icon_bg_end">#F3F4F6</color>
+    <color name="hawk_icon_glow">#E5E7EB</color>
+    <color name="hawk_icon_primary">#0A0A0A</color>
+    <color name="hawk_icon_secondary">#111111</color>
+    <color name="hawk_icon_accent">#6B7280</color>
+</resources>

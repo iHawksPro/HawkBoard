@@ -1,0 +1,558 @@
+package com.paletteboard.engine.theme
+
+import com.paletteboard.domain.model.AnimationStyle
+import com.paletteboard.domain.model.BorderSpec
+import com.paletteboard.domain.model.ColorToken
+import com.paletteboard.domain.model.FillStyle
+import com.paletteboard.domain.model.GestureTrailStyle
+import com.paletteboard.domain.model.GradientSpec
+import com.paletteboard.domain.model.KeyboardTransitionPreset
+import com.paletteboard.domain.model.KeyShapeStyle
+import com.paletteboard.domain.model.KeyPressAnimationPreset
+import com.paletteboard.domain.model.KeyStyle
+import com.paletteboard.domain.model.KeyboardBackground
+import com.paletteboard.domain.model.LayoutMetrics
+import com.paletteboard.domain.model.RowStyleOverride
+import com.paletteboard.domain.model.ShadowSpec
+import com.paletteboard.domain.model.Theme
+import com.paletteboard.domain.model.ToolbarStyle
+
+object DefaultThemes {
+    const val DEFAULT_THEME_ID = "midnight_pulse"
+
+    val midnightPulse: Theme = makeTheme(
+        id = DEFAULT_THEME_ID,
+        name = "Hawk Midnight",
+        backgroundFill = gradient(120f, 0xFF020617, 0xFF0F172A, 0xFF0B1120),
+        defaultKeyFill = solid(0xFF1E293B),
+        functionKeyFill = solid(0xFF334155),
+        shiftFill = solid(0xFF0F766E),
+        enterFill = solid(0xFF06B6D4),
+        spaceFill = solid(0xFF0F172A),
+        labelColor = 0xFFF8FAFC,
+        shiftLabelColor = 0xFFFFFFFF,
+        enterLabelColor = 0xFF082F49,
+        trailColor = 0xFF22D3EE,
+        toolbarFill = solid(0xFF0B1120),
+        toolbarLabelColor = 0xFFE2E8F0,
+        shape = KeyShapeStyle.ROUNDED,
+        cornerRadius = 18f,
+        keyBorderColor = 0x1FFFFFFF,
+        functionBorderColor = 0x24E2E8F0,
+        spaceBorderColor = 0x2622D3EE,
+        rowAccentFill = solid(0xFF23324B),
+        rowAccentIndex = 0,
+    )
+
+    val crimsonVolt: Theme = makeTheme(
+        id = "crimson_volt",
+        name = "Crimson Volt",
+        backgroundFill = gradient(135f, 0xFF18030A, 0xFF3F0713, 0xFF5B1020),
+        defaultKeyFill = solid(0xFF7F1D1D),
+        functionKeyFill = solid(0xFF991B1B),
+        shiftFill = solid(0xFFEF4444),
+        enterFill = solid(0xFFF97316),
+        spaceFill = solid(0xFF450A0A),
+        labelColor = 0xFFFFF1F2,
+        trailColor = 0xFFFB7185,
+        toolbarFill = solid(0xFF2A0A12),
+        toolbarLabelColor = 0xFFFFE4E6,
+        shape = KeyShapeStyle.SQUARED,
+        cornerRadius = 12f,
+        keyBorderColor = 0x33FCA5A5,
+        shadowColor = 0x66000000,
+        shadowBlur = 6f,
+        rowAccentFill = solid(0xFFB91C1C),
+        rowAccentIndex = 2,
+    )
+
+    val sapphireCurrent: Theme = makeTheme(
+        id = "sapphire_current",
+        name = "Sapphire Current",
+        backgroundFill = gradient(150f, 0xFF0B1F48, 0xFF123C8B, 0xFF1D4ED8),
+        defaultKeyFill = solid(0xFF1D4ED8),
+        functionKeyFill = solid(0xFF1E40AF),
+        shiftFill = solid(0xFF38BDF8),
+        enterFill = solid(0xFF60A5FA),
+        spaceFill = solid(0xFF0F2F75),
+        labelColor = 0xFFF8FAFC,
+        enterLabelColor = 0xFF082F49,
+        trailColor = 0xFF7DD3FC,
+        toolbarFill = solid(0xFF102A5A),
+        toolbarLabelColor = 0xFFE0F2FE,
+        shape = KeyShapeStyle.ROUNDED,
+        cornerRadius = 20f,
+        keyBorderColor = 0x2BBFDBFE,
+        rowAccentFill = solid(0xFF2563EB),
+        rowAccentIndex = 1,
+    )
+
+    val violetLuxe: Theme = makeTheme(
+        id = "violet_luxe",
+        name = "Violet Luxe",
+        backgroundFill = gradient(135f, 0xFF22103A, 0xFF4C1D95, 0xFF7C3AED),
+        defaultKeyFill = solid(0x7AFFFFFF),
+        functionKeyFill = solid(0x8831266F),
+        shiftFill = solid(0xFFA855F7),
+        enterFill = solid(0xFFF472B6),
+        spaceFill = solid(0x70FFFFFF),
+        labelColor = 0xFFFFFFFF,
+        trailColor = 0xFFE879F9,
+        toolbarFill = solid(0x7031266F),
+        toolbarLabelColor = 0xFFF5F3FF,
+        shape = KeyShapeStyle.GLASS,
+        cornerRadius = 24f,
+        keyBorderColor = 0x55FFFFFF,
+        functionBorderColor = 0x44DDD6FE,
+        spaceBorderColor = 0x66FFFFFF,
+        shadowColor = 0x40000000,
+        shadowBlur = 10f,
+        blurRadius = 14f,
+        translucency = 0.22f,
+    )
+
+    val emeraldCanopy: Theme = makeTheme(
+        id = "emerald_canopy",
+        name = "Emerald Canopy",
+        backgroundFill = gradient(120f, 0xFF022C22, 0xFF065F46, 0xFF10B981),
+        defaultKeyFill = solid(0xFF065F46),
+        functionKeyFill = solid(0xFF064E3B),
+        shiftFill = solid(0xFF34D399),
+        enterFill = solid(0xFF6EE7B7),
+        spaceFill = solid(0xFF033B2E),
+        labelColor = 0xFFECFDF5,
+        enterLabelColor = 0xFF064E3B,
+        trailColor = 0xFF86EFAC,
+        toolbarFill = solid(0xFF043A2D),
+        toolbarLabelColor = 0xFFD1FAE5,
+        shape = KeyShapeStyle.ROUNDED,
+        cornerRadius = 18f,
+        keyBorderColor = 0x336EE7B7,
+        rowAccentFill = solid(0xFF047857),
+        rowAccentIndex = 0,
+    )
+
+    val amberBloom: Theme = makeTheme(
+        id = "amber_bloom",
+        name = "Amber Bloom",
+        backgroundFill = gradient(90f, 0xFFFFFBEB, 0xFFFFF7ED, 0xFFFFEDD5),
+        defaultKeyFill = solid(0xFFFFFFFF),
+        functionKeyFill = solid(0xFFFFEDD5),
+        shiftFill = solid(0xFFF59E0B),
+        enterFill = solid(0xFFF97316),
+        spaceFill = solid(0xFFFFFFFF),
+        labelColor = 0xFF78350F,
+        shiftLabelColor = 0xFFFFFFFF,
+        enterLabelColor = 0xFFFFFFFF,
+        trailColor = 0xFFF59E0B,
+        toolbarFill = solid(0xFFFFF7ED),
+        toolbarLabelColor = 0xFF7C2D12,
+        shape = KeyShapeStyle.PILL,
+        cornerRadius = 24f,
+        keyBorderColor = 0x22F59E0B,
+        functionBorderColor = 0x33F97316,
+        spaceBorderColor = 0x22F59E0B,
+    )
+
+    val roseQuartz: Theme = makeTheme(
+        id = "rose_quartz",
+        name = "Rose Quartz",
+        backgroundFill = gradient(105f, 0xFFFFF1F2, 0xFFFCE7F3, 0xFFFDF2F8),
+        defaultKeyFill = solid(0xFFFFFFFF),
+        functionKeyFill = solid(0xFFFBCFE8),
+        shiftFill = solid(0xFFFB7185),
+        enterFill = solid(0xFFEC4899),
+        spaceFill = solid(0xFFFFFFFF),
+        labelColor = 0xFF831843,
+        shiftLabelColor = 0xFFFFFFFF,
+        enterLabelColor = 0xFFFFFFFF,
+        trailColor = 0xFFF472B6,
+        toolbarFill = solid(0xFFFCE7F3),
+        toolbarLabelColor = 0xFF9D174D,
+        shape = KeyShapeStyle.PILL,
+        cornerRadius = 24f,
+        keyBorderColor = 0x26FB7185,
+        functionBorderColor = 0x33F9A8D4,
+        spaceBorderColor = 0x26FB7185,
+    )
+
+    val arcticMist: Theme = makeTheme(
+        id = "arctic_mist",
+        name = "Arctic Mist",
+        backgroundFill = gradient(120f, 0xFFE0F2FE, 0xFFF0F9FF, 0xFFDBEAFE),
+        defaultKeyFill = solid(0xCCFFFFFF),
+        functionKeyFill = solid(0xBFDDEAFE),
+        shiftFill = solid(0xFF38BDF8),
+        enterFill = solid(0xFF0EA5E9),
+        spaceFill = solid(0xD8FFFFFF),
+        labelColor = 0xFF0F172A,
+        shiftLabelColor = 0xFFFFFFFF,
+        enterLabelColor = 0xFFFFFFFF,
+        trailColor = 0xFF38BDF8,
+        toolbarFill = solid(0xAFFFFFFF),
+        toolbarLabelColor = 0xFF0F172A,
+        shape = KeyShapeStyle.GLASS,
+        cornerRadius = 22f,
+        keyBorderColor = 0x40FFFFFF,
+        functionBorderColor = 0x3370C9FF,
+        spaceBorderColor = 0x44FFFFFF,
+        shadowColor = 0x220F172A,
+        shadowBlur = 8f,
+        blurRadius = 8f,
+        translucency = 0.18f,
+    )
+
+    val obsidianChrome: Theme = makeTheme(
+        id = "obsidian_chrome",
+        name = "Obsidian Chrome",
+        backgroundFill = gradient(135f, 0xFF020617, 0xFF111111, 0xFF1F2937),
+        defaultKeyFill = solid(0xFF111827),
+        functionKeyFill = solid(0xFF374151),
+        shiftFill = solid(0xFF9CA3AF),
+        enterFill = solid(0xFF22D3EE),
+        spaceFill = solid(0xFF030712),
+        labelColor = 0xFFF9FAFB,
+        shiftLabelColor = 0xFF0F172A,
+        enterLabelColor = 0xFF082F49,
+        trailColor = 0xFF67E8F9,
+        toolbarFill = solid(0xFF0F172A),
+        toolbarLabelColor = 0xFFE5E7EB,
+        shape = KeyShapeStyle.SQUARED,
+        cornerRadius = 14f,
+        keyBorderColor = 0x269CA3AF,
+        functionBorderColor = 0x33D1D5DB,
+        spaceBorderColor = 0x2622D3EE,
+        rowAccentFill = solid(0xFF1F2937),
+        rowAccentIndex = 1,
+    )
+
+    val sunsetEmber: Theme = makeTheme(
+        id = "sunset_ember",
+        name = "Sunset Ember",
+        backgroundFill = gradient(135f, 0xFF7C2D12, 0xFFEA580C, 0xFFF97316),
+        defaultKeyFill = solid(0xFFFFEDD5),
+        functionKeyFill = solid(0xFFFED7AA),
+        shiftFill = solid(0xFFDC2626),
+        enterFill = solid(0xFFF59E0B),
+        spaceFill = solid(0xFFFFFBEB),
+        labelColor = 0xFF7C2D12,
+        shiftLabelColor = 0xFFFFFFFF,
+        enterLabelColor = 0xFFFFFFFF,
+        trailColor = 0xFFF97316,
+        toolbarFill = solid(0xFF9A3412),
+        toolbarLabelColor = 0xFFFFEDD5,
+        shape = KeyShapeStyle.BUBBLE,
+        cornerRadius = 26f,
+        keyBorderColor = 0x22EA580C,
+        functionBorderColor = 0x33FB923C,
+        spaceBorderColor = 0x22F97316,
+    )
+
+    val toxicLime: Theme = makeTheme(
+        id = "toxic_lime",
+        name = "Toxic Lime",
+        backgroundFill = gradient(125f, 0xFF020617, 0xFF0A0F1C, 0xFF111827),
+        defaultKeyFill = solid(0xFF1A2E05),
+        functionKeyFill = solid(0xFF365314),
+        shiftFill = solid(0xFFA3E635),
+        enterFill = solid(0xFF84CC16),
+        spaceFill = solid(0xFF111827),
+        labelColor = 0xFFF7FEE7,
+        shiftLabelColor = 0xFF1A2E05,
+        enterLabelColor = 0xFF1A2E05,
+        trailColor = 0xFFBEF264,
+        toolbarFill = solid(0xFF162112),
+        toolbarLabelColor = 0xFFD9F99D,
+        shape = KeyShapeStyle.BUBBLE,
+        cornerRadius = 22f,
+        keyBorderColor = 0x44BEF264,
+        functionBorderColor = 0x55BEF264,
+        spaceBorderColor = 0x33BEF264,
+        shadowColor = 0x88000000,
+        shadowBlur = 6f,
+        rowAccentFill = solid(0xFF3F6212),
+        rowAccentIndex = 2,
+    )
+
+    val royalAmethyst: Theme = makeTheme(
+        id = "royal_amethyst",
+        name = "Royal Amethyst",
+        backgroundFill = gradient(135f, 0xFF1E1B4B, 0xFF4C1D95, 0xFF6D28D9),
+        defaultKeyFill = solid(0xFF4C1D95),
+        functionKeyFill = solid(0xFF3730A3),
+        shiftFill = solid(0xFFC084FC),
+        enterFill = solid(0xFFA855F7),
+        spaceFill = solid(0xFF312E81),
+        labelColor = 0xFFFAF5FF,
+        shiftLabelColor = 0xFF3B0764,
+        enterLabelColor = 0xFFFFFFFF,
+        trailColor = 0xFFE879F9,
+        toolbarFill = solid(0xFF2E1065),
+        toolbarLabelColor = 0xFFF5D0FE,
+        shape = KeyShapeStyle.PILL,
+        cornerRadius = 26f,
+        keyBorderColor = 0x33D8B4FE,
+        functionBorderColor = 0x33C4B5FD,
+        spaceBorderColor = 0x33E879F9,
+    )
+
+    val coralCandy: Theme = makeTheme(
+        id = "coral_candy",
+        name = "Coral Candy",
+        backgroundFill = gradient(125f, 0xFFFFF1F2, 0xFFFFE4E6, 0xFFFFEDD5),
+        defaultKeyFill = solid(0xFFFFFFFF),
+        functionKeyFill = solid(0xFFFFE4E6),
+        shiftFill = solid(0xFFFB7185),
+        enterFill = solid(0xFFFB923C),
+        spaceFill = solid(0xFFFFFFFF),
+        labelColor = 0xFF9F1239,
+        shiftLabelColor = 0xFFFFFFFF,
+        enterLabelColor = 0xFFFFFFFF,
+        trailColor = 0xFFFB7185,
+        toolbarFill = solid(0xFFFFF1F2),
+        toolbarLabelColor = 0xFF9F1239,
+        shape = KeyShapeStyle.BUBBLE,
+        cornerRadius = 24f,
+        keyBorderColor = 0x22FB7185,
+        functionBorderColor = 0x22FB923C,
+        spaceBorderColor = 0x22FB7185,
+    )
+
+    val oceanDepths: Theme = makeTheme(
+        id = "ocean_depths",
+        name = "Ocean Depths",
+        backgroundFill = gradient(140f, 0xFF082F49, 0xFF0F766E, 0xFF164E63),
+        defaultKeyFill = solid(0xFF0F766E),
+        functionKeyFill = solid(0xFF155E75),
+        shiftFill = solid(0xFF2DD4BF),
+        enterFill = solid(0xFF38BDF8),
+        spaceFill = solid(0xFF0C4A6E),
+        labelColor = 0xFFF0FDFA,
+        shiftLabelColor = 0xFF083344,
+        enterLabelColor = 0xFF082F49,
+        trailColor = 0xFF5EEAD4,
+        toolbarFill = solid(0xFF083344),
+        toolbarLabelColor = 0xFFCCFBF1,
+        shape = KeyShapeStyle.ROUNDED,
+        cornerRadius = 20f,
+        keyBorderColor = 0x3367E8F9,
+        functionBorderColor = 0x3345D8E8,
+        spaceBorderColor = 0x335EEAD4,
+        rowAccentFill = solid(0xFF0E7490),
+        rowAccentIndex = 0,
+    )
+
+    val copperForge: Theme = makeTheme(
+        id = "copper_forge",
+        name = "Copper Forge",
+        backgroundFill = gradient(130f, 0xFF292524, 0xFF78350F, 0xFFB45309),
+        defaultKeyFill = solid(0xFF7C2D12),
+        functionKeyFill = solid(0xFF9A3412),
+        shiftFill = solid(0xFFF59E0B),
+        enterFill = solid(0xFFFB923C),
+        spaceFill = solid(0xFF431407),
+        labelColor = 0xFFFFFBEB,
+        shiftLabelColor = 0xFF7C2D12,
+        enterLabelColor = 0xFFFFFFFF,
+        trailColor = 0xFFFBBF24,
+        toolbarFill = solid(0xFF3F1C0A),
+        toolbarLabelColor = 0xFFFDE68A,
+        shape = KeyShapeStyle.SQUARED,
+        cornerRadius = 16f,
+        keyBorderColor = 0x33FDBA74,
+        functionBorderColor = 0x33FDBA74,
+        spaceBorderColor = 0x33F59E0B,
+    )
+
+    val skyPop: Theme = makeTheme(
+        id = "sky_pop",
+        name = "Sky Pop",
+        backgroundFill = gradient(135f, 0xFFE0F2FE, 0xFFBAE6FD, 0xFFA5F3FC),
+        defaultKeyFill = solid(0xFFFFFFFF),
+        functionKeyFill = solid(0xFFDBEAFE),
+        shiftFill = solid(0xFF2563EB),
+        enterFill = solid(0xFF06B6D4),
+        spaceFill = solid(0xFFFFFFFF),
+        labelColor = 0xFF0C4A6E,
+        shiftLabelColor = 0xFFFFFFFF,
+        enterLabelColor = 0xFFFFFFFF,
+        trailColor = 0xFF38BDF8,
+        toolbarFill = solid(0xFFECFEFF),
+        toolbarLabelColor = 0xFF075985,
+        shape = KeyShapeStyle.PILL,
+        cornerRadius = 24f,
+        keyBorderColor = 0x2248BDFE,
+        functionBorderColor = 0x223B82F6,
+        spaceBorderColor = 0x2248BDFE,
+    )
+
+    val plumNeon: Theme = makeTheme(
+        id = "plum_neon",
+        name = "Plum Neon",
+        backgroundFill = gradient(130f, 0xFF14031F, 0xFF3B0764, 0xFF86198F),
+        defaultKeyFill = solid(0xFF581C87),
+        functionKeyFill = solid(0xFF701A75),
+        shiftFill = solid(0xFFE879F9),
+        enterFill = solid(0xFF22D3EE),
+        spaceFill = solid(0xFF3B0764),
+        labelColor = 0xFFFAF5FF,
+        shiftLabelColor = 0xFF3B0764,
+        enterLabelColor = 0xFF082F49,
+        trailColor = 0xFFE879F9,
+        toolbarFill = solid(0xFF2E1065),
+        toolbarLabelColor = 0xFFF0ABFC,
+        shape = KeyShapeStyle.BUBBLE,
+        cornerRadius = 22f,
+        keyBorderColor = 0x44F0ABFC,
+        functionBorderColor = 0x44F472B6,
+        spaceBorderColor = 0x4422D3EE,
+        shadowColor = 0x88000000,
+        shadowBlur = 8f,
+    )
+
+    val defaults: List<Theme> = listOf(
+        midnightPulse,
+        crimsonVolt,
+        sapphireCurrent,
+        violetLuxe,
+        emeraldCanopy,
+        amberBloom,
+        roseQuartz,
+        arcticMist,
+        obsidianChrome,
+        sunsetEmber,
+        toxicLime,
+        royalAmethyst,
+        coralCandy,
+        oceanDepths,
+        copperForge,
+        skyPop,
+        plumNeon,
+    )
+
+    private fun makeTheme(
+        id: String,
+        name: String,
+        backgroundFill: FillStyle,
+        defaultKeyFill: FillStyle,
+        functionKeyFill: FillStyle,
+        shiftFill: FillStyle,
+        enterFill: FillStyle,
+        spaceFill: FillStyle,
+        labelColor: Long,
+        trailColor: Long,
+        toolbarFill: FillStyle,
+        toolbarLabelColor: Long,
+        shape: KeyShapeStyle,
+        cornerRadius: Float,
+        keyBorderColor: Long,
+        functionBorderColor: Long = keyBorderColor,
+        spaceBorderColor: Long = keyBorderColor,
+        shiftLabelColor: Long = 0xFFFFFFFF,
+        enterLabelColor: Long = 0xFFFFFFFF,
+        shadowColor: Long = 0x44000000,
+        shadowBlur: Float = 2f,
+        blurRadius: Float = 0f,
+        translucency: Float = 0f,
+        rowAccentFill: FillStyle? = null,
+        rowAccentIndex: Int? = null,
+    ): Theme {
+        val baseStyle = KeyStyle(
+            fill = defaultKeyFill,
+            labelColor = color(labelColor),
+            iconColor = color(labelColor),
+            border = BorderSpec(color(keyBorderColor), 1f),
+            shadow = ShadowSpec(color(shadowColor), blurRadiusDp = shadowBlur, offsetYDp = 2f),
+            shape = shape,
+            cornerRadiusDp = cornerRadius,
+            labelSizeSp = 20f,
+        )
+
+        return Theme(
+            id = id,
+            name = name,
+            author = "Hawk Board",
+            isPreset = true,
+            background = KeyboardBackground(
+                fill = backgroundFill,
+                blurRadiusDp = blurRadius,
+                translucency = translucency,
+            ),
+            layoutMetrics = LayoutMetrics(
+                keyboardPaddingDp = 8f,
+                keyGapDp = 6f,
+                rowGapDp = 6f,
+            ),
+            defaultKeyStyle = baseStyle,
+            functionalKeyStyle = baseStyle.copy(
+                fill = functionKeyFill,
+                border = BorderSpec(color(functionBorderColor), 1f),
+            ),
+            shiftKeyStyle = baseStyle.copy(
+                fill = shiftFill,
+                labelColor = color(shiftLabelColor),
+                iconColor = color(shiftLabelColor),
+                border = BorderSpec(color(functionBorderColor), 1f),
+            ),
+            enterKeyStyle = baseStyle.copy(
+                fill = enterFill,
+                labelColor = color(enterLabelColor),
+                iconColor = color(enterLabelColor),
+                border = BorderSpec(color(functionBorderColor), 1f),
+            ),
+            backspaceKeyStyle = baseStyle.copy(
+                fill = functionKeyFill,
+                border = BorderSpec(color(functionBorderColor), 1f),
+            ),
+            spacebarStyle = baseStyle.copy(
+                fill = spaceFill,
+                border = BorderSpec(color(spaceBorderColor), 1f),
+                cornerRadiusDp = cornerRadius + 6f,
+            ),
+            gestureTrailStyle = GestureTrailStyle(
+                color = color(trailColor),
+                thicknessDp = if (shape == KeyShapeStyle.GLASS) 6f else 5f,
+            ),
+            animationStyle = AnimationStyle(
+                keyPressPreset = if (shape == KeyShapeStyle.GLASS || shape == KeyShapeStyle.BUBBLE) {
+                    KeyPressAnimationPreset.GLOW
+                } else {
+                    KeyPressAnimationPreset.SCALE
+                },
+                keyboardTransitionPreset = KeyboardTransitionPreset.FADE_SLIDE,
+            ),
+            toolbarStyle = ToolbarStyle(
+                fill = toolbarFill,
+                labelColor = color(toolbarLabelColor),
+                chipCornerRadiusDp = cornerRadius,
+            ),
+            rowStyles = if (rowAccentFill != null && rowAccentIndex != null) {
+                listOf(
+                    RowStyleOverride(
+                        rowIndex = rowAccentIndex,
+                        keyStyle = baseStyle.copy(
+                            fill = rowAccentFill,
+                            border = BorderSpec(color(functionBorderColor), 1f),
+                        ),
+                    ),
+                )
+            } else {
+                emptyList()
+            },
+        )
+    }
+
+    private fun solid(argb: Long, alpha: Float = 1f): FillStyle = FillStyle(
+        solidColor = color(argb),
+        alpha = alpha,
+    )
+
+    private fun gradient(angle: Float, vararg colors: Long): FillStyle = FillStyle(
+        gradient = GradientSpec(
+            colors = colors.map(::color),
+            angleDegrees = angle,
+        ),
+    )
+
+    private fun color(argb: Long): ColorToken = ColorToken(argb)
+}
