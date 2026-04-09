@@ -2,6 +2,7 @@ package com.paletteboard.updater
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -37,7 +38,9 @@ class AppUpdateManager(
     }
 
     fun isUpdateAvailable(release: AppUpdateInfo): Boolean {
-        return release.assetUpdatedAtEpochMs > BuildConfig.BUILD_TIME_UTC
+        val installedUpdatedAt = installedPackageLastUpdatedAt()
+        if (release.assetUpdatedAtEpochMs <= 0L) return false
+        return release.assetUpdatedAtEpochMs > installedUpdatedAt + INSTALLED_TIME_SKEW_MS
     }
 
     suspend fun downloadUpdate(
@@ -135,6 +138,20 @@ class AppUpdateManager(
         return runCatching { Instant.parse(value).toEpochMilli() }.getOrDefault(0L)
     }
 
+    private fun installedPackageLastUpdatedAt(): Long {
+        return runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.packageManager.getPackageInfo(
+                    context.packageName,
+                    PackageManager.PackageInfoFlags.of(0),
+                ).lastUpdateTime
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime
+            }
+        }.getOrDefault(BuildConfig.BUILD_TIME_UTC)
+    }
+
     private fun openConnection(rawUrl: String): HttpURLConnection {
         return (URL(rawUrl).openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
@@ -150,5 +167,6 @@ class AppUpdateManager(
         const val LATEST_RELEASE_URL = "https://api.github.com/repos/iHawksPro/HawkBoard/releases/latest"
         const val RELEASE_ASSET_NAME = "HawkBoard-release-signed.apk"
         const val APK_MIME_TYPE = "application/vnd.android.package-archive"
+        const val INSTALLED_TIME_SKEW_MS = 15_000L
     }
 }

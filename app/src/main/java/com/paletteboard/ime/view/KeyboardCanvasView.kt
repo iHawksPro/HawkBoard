@@ -82,6 +82,8 @@ class KeyboardCanvasView @JvmOverloads constructor(
     private var pressAnimator: ValueAnimator? = null
     private var averageCharacterKeyWidth = 0f
     private var averageCharacterKeyHeight = 0f
+    private var lastGeometryLayout: KeyboardLayout? = null
+    private var lastGeometryMetrics: com.paletteboard.domain.model.LayoutMetrics? = null
 
     private val repeatBackspaceRunnable = object : Runnable {
         override fun run() {
@@ -116,12 +118,17 @@ class KeyboardCanvasView @JvmOverloads constructor(
         shiftState: ShiftState,
         popupPreviewEnabled: Boolean,
     ) {
+        val geometryChanged = lastGeometryLayout != layout || lastGeometryMetrics != keyboardTheme.layoutMetrics
         layoutSpec = layout
         theme = keyboardTheme
         themeManager = manager
         this.shiftState = shiftState
         this.popupPreviewEnabled = popupPreviewEnabled
-        recomputeGeometry(width, height)
+        if (geometryChanged) {
+            lastGeometryLayout = layout
+            lastGeometryMetrics = keyboardTheme.layoutMetrics
+            recomputeGeometry(width, height)
+        }
         invalidate()
     }
 
@@ -606,7 +613,7 @@ class KeyboardCanvasView @JvmOverloads constructor(
     private fun animatePress(target: Float, clearOnEnd: Boolean = false) {
         pressAnimator?.cancel()
         pressAnimator = ValueAnimator.ofFloat(pressProgress, target).apply {
-            duration = 90L
+            duration = 68L
             addUpdateListener {
                 pressProgress = it.animatedValue as Float
                 invalidate()

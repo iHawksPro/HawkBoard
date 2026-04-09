@@ -14,10 +14,14 @@ import com.paletteboard.util.toAndroidColor
 
 class SuggestionStripView(context: Context) : LinearLayout(context) {
     private var suggestionClickListener: ((String) -> Unit)? = null
+    private val suggestionViews = List(MAX_VISIBLE_SUGGESTIONS) { index ->
+        buildSuggestionView(index)
+    }
 
     init {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER
+        suggestionViews.forEach { addView(it) }
     }
 
     fun setOnSuggestionClickListener(listener: (String) -> Unit) {
@@ -28,7 +32,6 @@ class SuggestionStripView(context: Context) : LinearLayout(context) {
         suggestions: List<String>,
         theme: Theme,
     ) {
-        removeAllViews()
         if (suggestions.isEmpty()) {
             visibility = GONE
             return
@@ -40,33 +43,43 @@ class SuggestionStripView(context: Context) : LinearLayout(context) {
         val secondaryTextColor = theme.defaultKeyStyle.labelColor.toAndroidColor()
         val highlightFill = blendArgb(containerColor, theme.defaultKeyStyle.fill.primaryColor().toAndroidColor(), 0.46f)
 
-        suggestions.take(3).forEachIndexed { index, suggestion ->
-            addView(
-                TextView(context).apply {
-                    text = suggestion
-                    gravity = Gravity.CENTER
-                    minHeight = context.dp(30f).toInt()
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, if (index == 0) 17.5f else 16.5f)
-                    setPadding(
-                        context.dp(8f).toInt(),
-                        context.dp(6f).toInt(),
-                        context.dp(8f).toInt(),
-                        context.dp(6f).toInt(),
-                    )
-                    setTypeface(typeface, if (index == 0) Typeface.BOLD else Typeface.NORMAL)
-                    setTextColor(if (index == 0) textColor else secondaryTextColor)
-                    background = GradientDrawable().apply {
-                        shape = GradientDrawable.RECTANGLE
-                        cornerRadius = context.dp(16f)
-                        setColor(if (index == 0) highlightFill else android.graphics.Color.TRANSPARENT)
-                    }
-                    setOnClickListener { suggestionClickListener?.invoke(suggestion) }
-                    layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
-                        marginStart = context.dp(3f).toInt()
-                        marginEnd = context.dp(3f).toInt()
-                    }
-                },
-            )
+        suggestionViews.forEachIndexed { index, view ->
+            val suggestion = suggestions.getOrNull(index)
+            if (suggestion == null) {
+                view.visibility = INVISIBLE
+                view.text = ""
+                return@forEachIndexed
+            }
+            view.visibility = VISIBLE
+            view.text = suggestion
+            view.setTypeface(view.typeface, if (index == 0) Typeface.BOLD else Typeface.NORMAL)
+            view.setTextColor(if (index == 0) textColor else secondaryTextColor)
+            view.background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = context.dp(16f)
+                setColor(if (index == 0) highlightFill else android.graphics.Color.TRANSPARENT)
+            }
+            view.setOnClickListener { suggestionClickListener?.invoke(suggestion) }
         }
+    }
+
+    private fun buildSuggestionView(index: Int): TextView = TextView(context).apply {
+        gravity = Gravity.CENTER
+        minHeight = context.dp(30f).toInt()
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, if (index == 0) 17.5f else 16.5f)
+        setPadding(
+            context.dp(8f).toInt(),
+            context.dp(6f).toInt(),
+            context.dp(8f).toInt(),
+            context.dp(6f).toInt(),
+        )
+        layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
+            marginStart = context.dp(3f).toInt()
+            marginEnd = context.dp(3f).toInt()
+        }
+    }
+
+    private companion object {
+        const val MAX_VISIBLE_SUGGESTIONS = 3
     }
 }

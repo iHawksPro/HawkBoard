@@ -62,6 +62,16 @@ class KeyboardRootView @JvmOverloads constructor(
     private var lastLayoutId: String? = null
     private var bottomSystemInsetPx: Int = 0
     private var currentTheme: Theme = DefaultThemes.midnightPulse
+    private var lastToolbarItems: List<ToolbarItem> = emptyList()
+    private var lastToolbarTheme: Theme? = null
+    private var lastToolbarMode: OneHandedMode = OneHandedMode.OFF
+    private var lastSuggestions: List<String> = emptyList()
+    private var lastSuggestionTheme: Theme? = null
+    private var lastEmojiUiState: EmojiUiState? = null
+    private var lastEmojiTheme: Theme? = null
+    private var lastStageWidth: Int = -1
+    private var lastStageHeight: Int = -1
+    private var lastContentGravity: Int = Gravity.CENTER_HORIZONTAL
 
     init {
         orientation = VERTICAL
@@ -139,9 +149,22 @@ class KeyboardRootView @JvmOverloads constructor(
         oneHandedMode: OneHandedMode,
     ) {
         currentTheme = theme
-        toolbarView.setItems(toolbarItems, theme, oneHandedMode)
-        emojiHeaderView.render(emojiUiState, theme)
-        suggestionStripView.setSuggestions(suggestions, theme)
+        if (toolbarItems != lastToolbarItems || theme != lastToolbarTheme || oneHandedMode != lastToolbarMode) {
+            toolbarView.setItems(toolbarItems, theme, oneHandedMode)
+            lastToolbarItems = toolbarItems.toList()
+            lastToolbarTheme = theme
+            lastToolbarMode = oneHandedMode
+        }
+        if (emojiUiState != lastEmojiUiState || theme != lastEmojiTheme) {
+            emojiHeaderView.render(emojiUiState, theme)
+            lastEmojiUiState = emojiUiState
+            lastEmojiTheme = theme
+        }
+        if (suggestions != lastSuggestions || theme != lastSuggestionTheme) {
+            suggestionStripView.setSuggestions(suggestions, theme)
+            lastSuggestions = suggestions.toList()
+            lastSuggestionTheme = theme
+        }
         keyboardCanvasView.render(
             layout = layout,
             keyboardTheme = theme,
@@ -155,27 +178,32 @@ class KeyboardRootView @JvmOverloads constructor(
             OneHandedMode.RIGHT -> Gravity.END
             OneHandedMode.OFF -> Gravity.CENTER_HORIZONTAL
         }
-        toolbarView.layoutParams = (toolbarView.layoutParams as LayoutParams).apply {
-            width = contentWidth
-            gravity = contentGravity
-            topMargin = context.dp(1f).toInt()
-            bottomMargin = context.dp(3f).toInt()
-        }
-        emojiHeaderView.layoutParams = (emojiHeaderView.layoutParams as LayoutParams).apply {
-            width = contentWidth
-            gravity = contentGravity
-            bottomMargin = if (emojiUiState?.isVisible == true) context.dp(4f).toInt() else 0
-        }
-        suggestionStripView.layoutParams = (suggestionStripView.layoutParams as LayoutParams).apply {
-            width = contentWidth
-            gravity = contentGravity
-            bottomMargin = context.dp(4f).toInt()
-        }
-        keyboardStage.layoutParams = (keyboardStage.layoutParams as LayoutParams).apply {
-            height = context.dp(BASE_KEYBOARD_HEIGHT_DP * keyboardHeightScale).toInt()
-            width = contentWidth
-            gravity = contentGravity
-        }
+        val stageHeight = context.dp(BASE_KEYBOARD_HEIGHT_DP * keyboardHeightScale).toInt()
+        val layoutChanged = updateLinearLayoutParams(
+            view = toolbarView,
+            width = contentWidth,
+            height = LayoutParams.WRAP_CONTENT,
+            gravity = contentGravity,
+            topMargin = context.dp(1f).toInt(),
+            bottomMargin = context.dp(3f).toInt(),
+        ) or updateLinearLayoutParams(
+            view = emojiHeaderView,
+            width = contentWidth,
+            height = LayoutParams.WRAP_CONTENT,
+            gravity = contentGravity,
+            bottomMargin = if (emojiUiState?.isVisible == true) context.dp(4f).toInt() else 0,
+        ) or updateLinearLayoutParams(
+            view = suggestionStripView,
+            width = contentWidth,
+            height = LayoutParams.WRAP_CONTENT,
+            gravity = contentGravity,
+            bottomMargin = context.dp(4f).toInt(),
+        ) or updateLinearLayoutParams(
+            view = keyboardStage,
+            width = contentWidth,
+            height = stageHeight,
+            gravity = contentGravity,
+        )
         updateBottomSpacer()
         setBackgroundColor(theme.background.fill.primaryColor().toAndroidColor())
         toolbarView.setBackgroundColor(Color.TRANSPARENT)
@@ -188,7 +216,12 @@ class KeyboardRootView @JvmOverloads constructor(
         }
         lastThemeId = theme.id
         lastLayoutId = layout.id
-        requestLayout()
+        if (layoutChanged || lastStageWidth != contentWidth || lastStageHeight != stageHeight || lastContentGravity != contentGravity) {
+            requestLayout()
+            lastStageWidth = contentWidth
+            lastStageHeight = stageHeight
+            lastContentGravity = contentGravity
+        }
         if (theme.animationStyle.themeMotionPreset != ThemeMotionPreset.NONE) {
             postInvalidateOnAnimation()
         }
@@ -285,6 +318,42 @@ class KeyboardRootView @JvmOverloads constructor(
         bottomSpacer.layoutParams = (bottomSpacer.layoutParams as LayoutParams).apply {
             height = max(context.dp(DEFAULT_BOTTOM_LIFT_DP).toInt(), bottomSystemInsetPx + context.dp(4f).toInt())
         }
+    }
+
+    private fun updateLinearLayoutParams(
+        view: View,
+        width: Int,
+        height: Int,
+        gravity: Int,
+        topMargin: Int = 0,
+        bottomMargin: Int = 0,
+    ): Boolean {
+        val params = view.layoutParams as LayoutParams
+        var changed = false
+        if (params.width != width) {
+            params.width = width
+            changed = true
+        }
+        if (params.height != height) {
+            params.height = height
+            changed = true
+        }
+        if (params.gravity != gravity) {
+            params.gravity = gravity
+            changed = true
+        }
+        if (params.topMargin != topMargin) {
+            params.topMargin = topMargin
+            changed = true
+        }
+        if (params.bottomMargin != bottomMargin) {
+            params.bottomMargin = bottomMargin
+            changed = true
+        }
+        if (changed) {
+            view.layoutParams = params
+        }
+        return changed
     }
 
     private fun configureBackgroundPaint(rect: RectF) {

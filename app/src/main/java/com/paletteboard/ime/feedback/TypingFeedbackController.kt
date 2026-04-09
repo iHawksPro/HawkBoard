@@ -33,6 +33,7 @@ class TypingFeedbackController(
         key: KeyboardKeySpec,
         soundPackId: String,
     ) {
+        if (audioManager?.ringerMode != AudioManager.RINGER_MODE_NORMAL) return
         val (effect, volume) = when (key.code) {
             KeyCodes.BACKSPACE -> AudioManager.FX_KEYPRESS_DELETE to volumeFor(soundPackId) * 0.82f
             KeyCodes.ENTER -> AudioManager.FX_KEYPRESS_RETURN to volumeFor(soundPackId)
@@ -46,16 +47,16 @@ class TypingFeedbackController(
         val deviceVibrator = vibrator ?: return
         if (!deviceVibrator.hasVibrator()) return
         val (duration, amplitude) = when (hapticProfileId) {
-            "light" -> 9L to 45
-            "strong" -> 22L to 125
-            else -> 15L to 82
+            "light" -> 7L to 32
+            "strong" -> 18L to 96
+            else -> 10L to 58
         }
         deviceVibrator.vibrate(VibrationEffect.createOneShot(duration, amplitude))
     }
 
     private fun volumeFor(soundPackId: String): Float = when (soundPackId) {
-        "soft" -> 0.18f
-        "arcade" -> 0.44f
-        else -> 0.28f
+        "soft" -> 0.1f
+        "arcade" -> 0.3f
+        else -> 0.18f
     }
 }
