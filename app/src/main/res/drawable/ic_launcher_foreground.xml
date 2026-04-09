@@ -5,32 +5,32 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:fillAlpha="0.28"
-        android:fillColor="@color/hawk_icon_glow"
-        android:pathData="M16,25L39,12L39,29L28,36L39,43L39,60L16,47Z" />
+        android:fillAlpha="0.16"
+        android:fillColor="@color/hawk_icon_plate"
+        android:pathData="M54,12L83,28L83,80L54,96L25,80L25,28Z" />
     <path
-        android:fillAlpha="0.28"
-        android:fillColor="@color/hawk_icon_glow"
-        android:pathData="M92,25L69,12L69,29L80,36L69,43L69,60L92,47Z" />
-    <path
-        android:fillColor="@color/hawk_icon_secondary"
-        android:pathData="M23,18L40,10L40,22L31,28L40,34L40,46L23,38Z" />
-    <path
-        android:fillColor="@color/hawk_icon_secondary"
-        android:pathData="M85,18L68,10L68,22L77,28L68,34L68,46L85,38Z" />
-    <path
-        android:fillColor="@color/hawk_icon_primary"
-        android:pathData="M31,18H43V90H31Z" />
-    <path
-        android:fillColor="@color/hawk_icon_primary"
-        android:pathData="M65,18H77V90H65Z" />
-    <path
-        android:fillColor="@color/hawk_icon_primary"
-        android:pathData="M31,45H77V57H31Z" />
-    <path
+        android:fillAlpha="0.22"
         android:fillColor="@color/hawk_icon_accent"
-        android:pathData="M50,18H58L69,90H61Z" />
+        android:pathData="M54,18L76,31L76,77L54,90L32,77L32,31Z" />
     <path
         android:fillColor="@color/hawk_icon_primary"
-        android:pathData="M49,18H59L46,90H36Z" />
+        android:pathData="M27,19L42,19L39,89L24,89Z" />
+    <path
+        android:fillColor="@color/hawk_icon_primary"
+        android:pathData="M66,19L81,19L84,89L69,89Z" />
+    <path
+        android:fillColor="@color/hawk_icon_secondary"
+        android:pathData="M38,45L70,45L72,61L40,61Z" />
+    <path
+        android:fillAlpha="0.34"
+        android:fillColor="@color/hawk_icon_glow"
+        android:pathData="M48,19L60,19L71,89L59,89Z" />
+    <path
+        android:fillAlpha="0.1"
+        android:fillColor="@color/hawk_icon_glow"
+        android:pathData="M22,32L35,24L35,33L28,38L35,43L35,52L22,44Z" />
+    <path
+        android:fillAlpha="0.1"
+        android:fillColor="@color/hawk_icon_glow"
+        android:pathData="M86,32L73,24L73,33L80,38L73,43L73,52L86,44Z" />
 </vector>

@@ -12,6 +12,7 @@ import com.paletteboard.domain.model.KeyboardTransitionPreset
 import com.paletteboard.domain.model.KeyPressAnimationPreset
 import com.paletteboard.domain.model.Theme
 import com.paletteboard.domain.model.ThemeExportFormat
+import com.paletteboard.domain.model.ThemeMotionPreset
 import com.paletteboard.domain.model.ToolbarAction
 import com.paletteboard.engine.theme.DefaultThemes
 import com.paletteboard.engine.theme.ThemeManager
@@ -168,12 +169,6 @@ class MainViewModel(
         )
     }
 
-    fun updateDraftTrailColor(argb: Long) = updateDraft { theme ->
-        theme.copy(
-            gestureTrailStyle = theme.gestureTrailStyle.copy(color = ColorToken(argb)),
-        )
-    }
-
     fun updateDraftKeyPressAnimation(preset: KeyPressAnimationPreset) = updateDraft { theme ->
         theme.copy(
             animationStyle = theme.animationStyle.copy(keyPressPreset = preset),
@@ -183,6 +178,12 @@ class MainViewModel(
     fun updateDraftKeyboardTransitionAnimation(preset: KeyboardTransitionPreset) = updateDraft { theme ->
         theme.copy(
             animationStyle = theme.animationStyle.copy(keyboardTransitionPreset = preset),
+        )
+    }
+
+    fun updateDraftThemeMotion(preset: ThemeMotionPreset) = updateDraft { theme ->
+        theme.copy(
+            animationStyle = theme.animationStyle.copy(themeMotionPreset = preset),
         )
     }
 
@@ -196,7 +197,6 @@ class MainViewModel(
         val background = randomColor()
         val primary = randomColor()
         val function = randomColor()
-        val trail = randomColor()
         updateDraft { theme ->
             theme.copy(
                 background = theme.background.copy(fill = FillStyle(solidColor = ColorToken(background))),
@@ -212,7 +212,6 @@ class MainViewModel(
                 backspaceKeyStyle = theme.backspaceKeyStyle.copy(
                     fill = theme.backspaceKeyStyle.fill.copy(solidColor = ColorToken(function)),
                 ),
-                gestureTrailStyle = theme.gestureTrailStyle.copy(color = ColorToken(trail)),
             )
         }
     }
@@ -225,16 +224,20 @@ class MainViewModel(
         updateSettings { settings -> settings.copy(showNumberRow = enabled) }
     }
 
-    fun setGlideTypingEnabled(enabled: Boolean) {
-        updateSettings { settings ->
-            settings.copy(gestureSettings = settings.gestureSettings.copy(enabled = enabled))
-        }
+    fun setAutoCapitalizationEnabled(enabled: Boolean) {
+        updateSettings { settings -> settings.copy(autoCapitalization = enabled) }
     }
 
-    fun setGestureSensitivity(value: Float) {
-        updateSettings { settings ->
-            settings.copy(gestureSettings = settings.gestureSettings.copy(sensitivity = value))
-        }
+    fun setSuggestionsEnabled(enabled: Boolean) {
+        updateSettings { settings -> settings.copy(suggestionsEnabled = enabled) }
+    }
+
+    fun setAutoCorrectionEnabled(enabled: Boolean) {
+        updateSettings { settings -> settings.copy(autoCorrectionEnabled = enabled) }
+    }
+
+    fun setPopupPreviewEnabled(enabled: Boolean) {
+        updateSettings { settings -> settings.copy(popupPreviewEnabled = enabled) }
     }
 
     fun setToolbarActionEnabled(action: ToolbarAction, enabled: Boolean) {

@@ -117,6 +117,8 @@ data class AnimationStyle(
     val keyPressPreset: KeyPressAnimationPreset = KeyPressAnimationPreset.SCALE,
     val keyboardTransitionPreset: KeyboardTransitionPreset = KeyboardTransitionPreset.FADE_SLIDE,
     val durationMs: Int = 140,
+    val themeMotionPreset: ThemeMotionPreset = ThemeMotionPreset.NONE,
+    val motionDurationMs: Int = 6000,
 )
 
 @Serializable
@@ -213,6 +215,9 @@ enum class KeyPressAnimationPreset {
     LIFT,
     GLOW,
     SLIDE,
+    FLASH,
+    SINK,
+    BLOOM,
 }
 
 @Serializable
@@ -222,4 +227,13 @@ enum class KeyboardTransitionPreset {
     RISE,
     ZOOM,
     WAVE,
+}
+
+@Serializable
+enum class ThemeMotionPreset {
+    NONE,
+    AURORA,
+    SHIMMER,
+    PULSE,
+    SPECTRUM,
 }

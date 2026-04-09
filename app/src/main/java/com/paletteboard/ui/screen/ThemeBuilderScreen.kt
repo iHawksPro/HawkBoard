@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.paletteboard.domain.model.KeyboardTransitionPreset
 import com.paletteboard.domain.model.KeyPressAnimationPreset
+import com.paletteboard.domain.model.ThemeMotionPreset
 import com.paletteboard.ui.state.MainUiState
 import com.paletteboard.util.primaryColor
 
@@ -49,9 +50,9 @@ fun ThemeBuilderScreen(
     onPrimaryColorChanged: (Long) -> Unit,
     onFunctionColorChanged: (Long) -> Unit,
     onBackgroundColorChanged: (Long) -> Unit,
-    onTrailColorChanged: (Long) -> Unit,
     onKeyPressAnimationChanged: (KeyPressAnimationPreset) -> Unit,
     onKeyboardTransitionAnimationChanged: (KeyboardTransitionPreset) -> Unit,
+    onThemeMotionChanged: (ThemeMotionPreset) -> Unit,
     onAnimationDurationChanged: (Int) -> Unit,
     onSaveTheme: () -> Unit,
     onReset: () -> Unit,
@@ -144,7 +145,7 @@ fun ThemeBuilderScreen(
         item {
             SectionCard(
                 title = "Color System",
-                subtitle = "Tune the surface, the standard keys, the functional keys, and the gesture trail so the whole keyboard feels intentional.",
+                subtitle = "Tune the surface, the standard keys, and the functional keys so the whole keyboard feels intentional and easy to read.",
             ) {
                 ColorSwatchPicker(
                     title = "Background",
@@ -164,12 +165,6 @@ fun ThemeBuilderScreen(
                     options = ThemeColorOptions,
                     onSelected = onFunctionColorChanged,
                 )
-                ColorSwatchPicker(
-                    title = "Gesture trail",
-                    selected = draftTheme.gestureTrailStyle.color.argb,
-                    options = ThemeColorOptions,
-                    onSelected = onTrailColorChanged,
-                )
             }
         }
         item {
@@ -187,9 +182,25 @@ fun ThemeBuilderScreen(
                         KeyPressAnimationPreset.LIFT,
                         KeyPressAnimationPreset.GLOW,
                         KeyPressAnimationPreset.SLIDE,
+                        KeyPressAnimationPreset.FLASH,
+                        KeyPressAnimationPreset.SINK,
+                        KeyPressAnimationPreset.BLOOM,
                     ),
                     labelFor = { it.displayName() },
                     onSelected = onKeyPressAnimationChanged,
+                )
+                OptionChipRow(
+                    title = "Theme motion",
+                    selected = draftTheme.animationStyle.themeMotionPreset,
+                    options = listOf(
+                        ThemeMotionPreset.NONE,
+                        ThemeMotionPreset.AURORA,
+                        ThemeMotionPreset.SHIMMER,
+                        ThemeMotionPreset.PULSE,
+                        ThemeMotionPreset.SPECTRUM,
+                    ),
+                    labelFor = { it.displayName() },
+                    onSelected = onThemeMotionChanged,
                 )
                 OptionChipRow(
                     title = "Keyboard transition",

@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.paletteboard.domain.model.Theme
+import com.paletteboard.domain.model.ThemeMotionPreset
 import com.paletteboard.ui.state.MainUiState
 
 @Composable
@@ -83,6 +84,9 @@ fun ThemeLibraryScreen(
                     TagChip(label = if (theme.isPreset) "Preset" else "Custom")
                     TagChip(label = theme.animationStyle.keyPressPreset.displayName())
                     TagChip(label = theme.animationStyle.keyboardTransitionPreset.displayName())
+                    if (theme.animationStyle.themeMotionPreset != ThemeMotionPreset.NONE) {
+                        TagChip(label = theme.animationStyle.themeMotionPreset.displayName())
+                    }
                 }
                 Column(
                     modifier = Modifier.fillMaxWidth(),

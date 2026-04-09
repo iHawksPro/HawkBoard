@@ -33,6 +33,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.ui.unit.dp
 import com.paletteboard.domain.model.FillStyle
 import com.paletteboard.domain.model.KeyStyle
@@ -57,6 +59,19 @@ fun HeroCard(
     fill: FillStyle? = null,
     content: @Composable ColumnScope.() -> Unit = {},
 ) {
+    val heroBackgroundColor = fill?.primaryColor()?.toComposeColor() ?: MaterialTheme.colorScheme.primary
+    val heroForegroundColor = readableContentColor(heroBackgroundColor)
+    val heroBrush = if (fill == null) {
+        Brush.linearGradient(
+            colors = listOf(
+                MaterialTheme.colorScheme.primary,
+                MaterialTheme.colorScheme.tertiary,
+                MaterialTheme.colorScheme.secondary,
+            ),
+        )
+    } else {
+        null
+    }
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -66,31 +81,39 @@ fun HeroCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillStyleBackground(fill, MaterialTheme.shapes.large)
+                .let { baseModifier ->
+                    if (heroBrush != null) {
+                        baseModifier.background(heroBrush, MaterialTheme.shapes.large)
+                    } else {
+                        baseModifier.fillStyleBackground(fill, MaterialTheme.shapes.large)
+                    }
+                }
                 .padding(20.dp)
                 .animateContentSize(),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                overline?.let {
+            CompositionLocalProvider(LocalContentColor provides heroForegroundColor) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    overline?.let {
+                        Text(
+                            text = it.uppercase(),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = LocalContentColor.current.copy(alpha = 0.78f),
+                        )
+                    }
                     Text(
-                        text = it.uppercase(),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.76f),
+                        text = title,
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = LocalContentColor.current,
+                    )
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = LocalContentColor.current.copy(alpha = 0.88f),
                     )
                 }
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.84f),
-                )
+                content()
             }
-            content()
         }
     }
 }
@@ -105,7 +128,7 @@ fun SectionCard(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
         ),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)),
     ) {
@@ -154,9 +177,9 @@ fun StatPill(
     Surface(
         modifier = modifier,
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.16f),
-        contentColor = MaterialTheme.colorScheme.onPrimary,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f)),
+        color = LocalContentColor.current.copy(alpha = 0.14f),
+        contentColor = LocalContentColor.current,
+        border = BorderStroke(1.dp, LocalContentColor.current.copy(alpha = 0.18f)),
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -165,12 +188,12 @@ fun StatPill(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.74f),
+                color = LocalContentColor.current.copy(alpha = 0.74f),
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = LocalContentColor.current,
             )
         }
     }
@@ -187,7 +210,7 @@ fun TagChip(
         enabled = false,
         label = { Text(label) },
         colors = AssistChipDefaults.assistChipColors(
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.96f),
             disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ),
         border = AssistChipDefaults.assistChipBorder(
@@ -231,7 +254,7 @@ fun SettingSwitchRow(
 ) {
     Surface(
         shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
     ) {
         Row(
@@ -275,7 +298,7 @@ fun NavigationTile(
             .clip(MaterialTheme.shapes.medium)
             .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.56f),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
     ) {
         Row(
@@ -490,19 +513,22 @@ fun KeyboardThemePreview(theme: Theme) {
             )
             PreviewRow(
                 listOf(
+                    theme.defaultKeyStyle,
                     theme.functionalKeyStyle,
                     theme.defaultKeyStyle,
                     theme.defaultKeyStyle,
                     theme.defaultKeyStyle,
                     theme.defaultKeyStyle,
                     theme.defaultKeyStyle,
-                    theme.backspaceKeyStyle,
+                    theme.defaultKeyStyle,
                 ),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PreviewKey(theme.functionalKeyStyle, label = "?123", modifier = Modifier.weight(1.2f))
-                PreviewKey(theme.spacebarStyle, label = "space", modifier = Modifier.weight(3.2f))
-                PreviewKey(theme.enterKeyStyle, label = "enter", modifier = Modifier.weight(1.3f))
+                PreviewKey(theme.functionalKeyStyle, label = "🌐", modifier = Modifier.weight(0.92f))
+                PreviewKey(theme.spacebarStyle, label = "English", modifier = Modifier.weight(4f))
+                PreviewKey(theme.defaultKeyStyle, label = ".", modifier = Modifier.weight(0.9f))
+                PreviewKey(theme.enterKeyStyle, label = "↵", modifier = Modifier.weight(1.2f))
             }
         }
     }
@@ -514,7 +540,7 @@ private fun PreviewSwatches(theme: Theme) {
         Swatch(theme.background.fill.primaryColor().toComposeColor(), label = "BG")
         Swatch(theme.defaultKeyStyle.fill.primaryColor().toComposeColor(), label = "Key")
         Swatch(theme.functionalKeyStyle.fill.primaryColor().toComposeColor(), label = "Fn")
-        Swatch(theme.gestureTrailStyle.color.toComposeColor(), label = "Trail")
+        Swatch(theme.enterKeyStyle.fill.primaryColor().toComposeColor(), label = "Go")
     }
 }
 
@@ -595,4 +621,10 @@ private fun Modifier.fillStyleBackground(
             shape = shape,
         )
     }
+}
+
+private fun readableContentColor(background: Color): Color = if (background.luminance() > 0.6f) {
+    Color(0xFF0F172A)
+} else {
+    Color.White
 }

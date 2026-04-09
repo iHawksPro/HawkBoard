@@ -4,10 +4,12 @@ import android.content.Intent
 import android.inputmethodservice.InputMethodService
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import com.paletteboard.domain.model.KeyCodes
 import com.paletteboard.MainActivity
 import com.paletteboard.app.PaletteBoardApp
-import com.paletteboard.domain.model.GestureSample
 import com.paletteboard.domain.model.KeyboardKeySpec
+import com.paletteboard.domain.model.OneHandedMode
 import com.paletteboard.domain.model.Theme
 import com.paletteboard.domain.model.ToolbarAction
 import com.paletteboard.domain.model.UserSettings
@@ -66,11 +68,6 @@ class PaletteInputMethodService : InputMethodService(), KeyboardRootView.Callbac
         render()
     }
 
-    override fun onFinishInputView(finishingInput: Boolean) {
-        keyboardRootView?.clearGestureTrail()
-        super.onFinishInputView(finishingInput)
-    }
-
     override fun onEvaluateFullscreenMode(): Boolean = false
 
     override fun onDestroy() {
@@ -79,18 +76,16 @@ class PaletteInputMethodService : InputMethodService(), KeyboardRootView.Callbac
     }
 
     override fun onKeyTapped(key: KeyboardKeySpec) {
-        appContainer.keyboardController.handleTap(
+        if (key.code == KeyCodes.LANGUAGE_SWITCH) {
+            getSystemService(InputMethodManager::class.java)?.showInputMethodPicker()
+            return
+        }
+        appContainer.typingFeedbackController.performKeyFeedback(
             key = key,
-            inputConnection = currentInputConnection,
-            editorInfo = currentEditor,
             settings = currentSettings,
         )
-        render()
-    }
-
-    override fun onGestureCompleted(sample: GestureSample) {
-        appContainer.keyboardController.handleGlide(
-            sample = sample,
+        appContainer.keyboardController.handleTap(
+            key = key,
             inputConnection = currentInputConnection,
             editorInfo = currentEditor,
             settings = currentSettings,
@@ -109,6 +104,14 @@ class PaletteInputMethodService : InputMethodService(), KeyboardRootView.Callbac
     }
 
     override fun onToolbarAction(action: ToolbarAction) {
+        if (action == ToolbarAction.ONE_HANDED) {
+            serviceScope.launch {
+                appContainer.settingsRepository.update { settings ->
+                    settings.copy(oneHandedMode = settings.oneHandedMode.nextMode())
+                }
+            }
+            return
+        }
         val result = appContainer.keyboardController.handleToolbarAction(
             action = action,
             settings = currentSettings,
@@ -132,8 +135,38 @@ class PaletteInputMethodService : InputMethodService(), KeyboardRootView.Callbac
         render()
     }
 
+    override fun onEmojiSearchTapped() {
+        appContainer.keyboardController.activateEmojiSearch(currentSettings)
+        render()
+    }
+
+    override fun onEmojiSearchCleared() {
+        appContainer.keyboardController.clearEmojiSearch(currentSettings)
+        render()
+    }
+
+    override fun onEmojiGroupSelected(group: String) {
+        appContainer.keyboardController.selectEmojiGroup(group, currentSettings)
+        render()
+    }
+
+    override fun onEmojiPreviousPage() {
+        appContainer.keyboardController.goToPreviousEmojiPage(currentSettings)
+        render()
+    }
+
+    override fun onEmojiNextPage() {
+        appContainer.keyboardController.goToNextEmojiPage(currentSettings)
+        render()
+    }
+
     private fun render() {
         val rootView = keyboardRootView ?: return
+        appContainer.keyboardController.synchronizeTextContext(
+            editorInfo = currentEditor,
+            inputConnection = currentInputConnection,
+            settings = currentSettings,
+        )
         val renderState = appContainer.keyboardController.buildRenderState(
             settings = currentSettings,
             inputConnection = currentInputConnection,
@@ -144,7 +177,17 @@ class PaletteInputMethodService : InputMethodService(), KeyboardRootView.Callbac
             suggestions = renderState.suggestions,
             toolbarItems = currentSettings.toolbarItems,
             themeManager = appContainer.themeManager,
+            shiftState = renderState.shiftState,
+            emojiUiState = renderState.emojiUiState,
+            popupPreviewEnabled = currentSettings.popupPreviewEnabled,
             keyboardHeightScale = currentSettings.keyboardHeightScale,
+            oneHandedMode = currentSettings.oneHandedMode,
         )
     }
+}
+
+private fun OneHandedMode.nextMode(): OneHandedMode = when (this) {
+    OneHandedMode.OFF -> OneHandedMode.RIGHT
+    OneHandedMode.RIGHT -> OneHandedMode.LEFT
+    OneHandedMode.LEFT -> OneHandedMode.OFF
 }

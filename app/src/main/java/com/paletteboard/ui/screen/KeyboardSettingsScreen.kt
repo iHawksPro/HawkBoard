@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Gesture
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.UploadFile
@@ -21,8 +20,10 @@ fun KeyboardSettingsScreen(
     uiState: MainUiState,
     onKeyboardHeightScaleChanged: (Float) -> Unit,
     onNumberRowChanged: (Boolean) -> Unit,
-    onGlideTypingChanged: (Boolean) -> Unit,
-    onOpenGestureSettings: () -> Unit,
+    onAutoCapitalizationChanged: (Boolean) -> Unit,
+    onSuggestionsChanged: (Boolean) -> Unit,
+    onAutoCorrectionChanged: (Boolean) -> Unit,
+    onPopupPreviewChanged: (Boolean) -> Unit,
     onOpenToolbarSettings: () -> Unit,
     onOpenSoundSettings: () -> Unit,
     onOpenImportExport: () -> Unit,
@@ -55,8 +56,8 @@ fun KeyboardSettingsScreen(
                     )
                     StatPill(
                         modifier = Modifier.weight(1f),
-                        label = "Glide",
-                        value = if (uiState.settings.gestureSettings.enabled) "On" else "Off",
+                        label = "Typing",
+                        value = if (uiState.settings.popupPreviewEnabled) "Preview on" else "Preview off",
                     )
                 }
             }
@@ -78,7 +79,7 @@ fun KeyboardSettingsScreen(
         item {
             SectionCard(
                 title = "Core Toggles",
-                subtitle = "Keep the important typing behavior switches close to the top so the keyboard stays easy to tune.",
+                subtitle = "Keep the highest-impact layout controls close to the top so the keyboard stays easy to tune.",
             ) {
                 SettingSwitchRow(
                     title = "Number row",
@@ -87,24 +88,36 @@ fun KeyboardSettingsScreen(
                     onCheckedChange = onNumberRowChanged,
                 )
                 SettingSwitchRow(
-                    title = "Glide typing",
-                    subtitle = "Slide across letters to form words while the path decoder predicts the best match.",
-                    checked = uiState.settings.gestureSettings.enabled,
-                    onCheckedChange = onGlideTypingChanged,
+                    title = "Auto-capitalization",
+                    subtitle = "Only capitalize at the start of a field, after a newline, or after sentence punctuation.",
+                    checked = uiState.settings.autoCapitalization,
+                    onCheckedChange = onAutoCapitalizationChanged,
+                )
+                SettingSwitchRow(
+                    title = "Suggestions",
+                    subtitle = "Show prediction chips above the keyboard while you type.",
+                    checked = uiState.settings.suggestionsEnabled,
+                    onCheckedChange = onSuggestionsChanged,
+                )
+                SettingSwitchRow(
+                    title = "Auto-correction framework",
+                    subtitle = "Keep the correction pipeline armed for future smarter replacements and suggestion ranking.",
+                    checked = uiState.settings.autoCorrectionEnabled,
+                    onCheckedChange = onAutoCorrectionChanged,
+                )
+                SettingSwitchRow(
+                    title = "Popup previews",
+                    subtitle = "Show enlarged popups on press and reveal long-press alternates more clearly.",
+                    checked = uiState.settings.popupPreviewEnabled,
+                    onCheckedChange = onPopupPreviewChanged,
                 )
             }
         }
         item {
             SectionCard(
                 title = "Deeper Control",
-                subtitle = "These sections shape how Hawk Board behaves beyond the basic layout and toggle layer.",
+                subtitle = "These sections shape how Hawk Board behaves beyond the basic layout layer.",
             ) {
-                NavigationTile(
-                    title = "Gesture settings",
-                    subtitle = "Adjust glide typing behavior, sensitivity, and the balance between speed and forgiveness.",
-                    icon = Icons.Rounded.Gesture,
-                    onClick = onOpenGestureSettings,
-                )
                 NavigationTile(
                     title = "Toolbar customization",
                     subtitle = "Choose which shortcuts and utilities appear above the keys.",

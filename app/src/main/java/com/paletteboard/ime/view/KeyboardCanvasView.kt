@@ -1,31 +1,36 @@
 package com.paletteboard.ime.view
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
+import android.os.SystemClock
 import android.util.AttributeSet
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewConfiguration
-import com.paletteboard.domain.model.GestureSample
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import com.paletteboard.domain.model.KeyGeometry
+import com.paletteboard.domain.model.KeyCodes
 import com.paletteboard.domain.model.KeyKind
 import com.paletteboard.domain.model.KeyPressAnimationPreset
+import com.paletteboard.domain.model.KeyShapeStyle
 import com.paletteboard.domain.model.KeyboardKeySpec
 import com.paletteboard.domain.model.KeyboardLayout
-import com.paletteboard.domain.model.KeyboardMode
 import com.paletteboard.domain.model.Theme
-import com.paletteboard.domain.model.TouchPoint
+import com.paletteboard.domain.model.ThemeMotionPreset
 import com.paletteboard.engine.theme.DefaultThemes
 import com.paletteboard.engine.theme.ThemeManager
+import com.paletteboard.ime.controller.ShiftState
+import com.paletteboard.util.blendArgb
 import com.paletteboard.util.primaryColor
 import com.paletteboard.util.toAndroidColor
 import kotlin.math.hypot
 import kotlin.math.max
+import kotlin.math.sin
 
 class KeyboardCanvasView @JvmOverloads constructor(
     context: Context,
@@ -33,48 +38,84 @@ class KeyboardCanvasView @JvmOverloads constructor(
 ) : View(context, attrs) {
     interface InteractionListener {
         fun onKeyTapped(key: KeyboardKeySpec)
-        fun onGestureProgress(points: List<TouchPoint>)
-        fun onGestureCompleted(sample: GestureSample)
         fun onInteractionFinished()
     }
 
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
+    private val hintPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.RIGHT }
+    private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+    private val popupPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val popupBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val pressedPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
 
-    private var layoutSpec: KeyboardLayout = KeyboardLayout(
+    private var layoutSpec = KeyboardLayout(
         id = "empty",
-        mode = KeyboardMode.LETTERS,
+        mode = com.paletteboard.domain.model.KeyboardMode.LETTERS,
         localeTag = "en-US",
         rows = emptyList(),
         supportsGlideTyping = false,
     )
     private var theme: Theme = DefaultThemes.midnightPulse
     private var themeManager: ThemeManager? = null
+    private var shiftState: ShiftState = ShiftState.OFF
+    private var popupPreviewEnabled = true
     private var geometries: List<KeyGeometry> = emptyList()
     private var interactionListener: InteractionListener? = null
-    private var activePoints = mutableListOf<TouchPoint>()
-    private var activeKeys = mutableListOf<KeyGeometry>()
     private var pressedKeyId: String? = null
     private var downKey: KeyGeometry? = null
-    private var gestureMode = false
-    private var gestureEligible = false
+    private var handledOnDownKeyId: String? = null
+    private var repeatingKeyId: String? = null
+    private var longPressKeyId: String? = null
+    private var popupOverrideText: String? = null
     private var pressProgress = 0f
     private var pressAnimator: ValueAnimator? = null
     private var averageCharacterKeyWidth = 0f
     private var averageCharacterKeyHeight = 0f
 
+    private val repeatBackspaceRunnable = object : Runnable {
+        override fun run() {
+            val key = downKey ?: return
+            if (key.spec.code != KeyCodes.BACKSPACE || key.spec.id != repeatingKeyId) return
+            interactionListener?.onKeyTapped(key.spec)
+            postDelayed(this, BACKSPACE_REPEAT_INTERVAL_MS)
+        }
+    }
+
+    private val longPressRunnable = object : Runnable {
+        override fun run() {
+            val key = downKey ?: return
+            if (key.spec.id != longPressKeyId) return
+            val overrideKey = longPressVariantFor(key.spec) ?: return
+            handledOnDownKeyId = key.spec.id
+            popupOverrideText = previewTextForKey(overrideKey)
+            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            interactionListener?.onKeyTapped(overrideKey)
+            invalidate()
+        }
+    }
+
     fun setInteractionListener(listener: InteractionListener) {
         interactionListener = listener
     }
 
-    fun render(layout: KeyboardLayout, keyboardTheme: Theme, manager: ThemeManager) {
+    fun render(
+        layout: KeyboardLayout,
+        keyboardTheme: Theme,
+        manager: ThemeManager,
+        shiftState: ShiftState,
+        popupPreviewEnabled: Boolean,
+    ) {
         layoutSpec = layout
         theme = keyboardTheme
         themeManager = manager
+        this.shiftState = shiftState
+        this.popupPreviewEnabled = popupPreviewEnabled
         recomputeGeometry(width, height)
         invalidate()
     }
@@ -86,138 +127,125 @@ class KeyboardCanvasView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        val now = SystemClock.uptimeMillis()
         geometries.forEachIndexed { index, geometry ->
             val rowIndex = rowIndexForGeometry(index)
-            val style = themeManager?.resolveKeyStyle(theme, geometry.spec, rowIndex) ?: theme.defaultKeyStyle
-            val baseRect = RectF(geometry.left, geometry.top, geometry.right, geometry.bottom)
-            val isPressed = pressedKeyId == geometry.spec.id
-            val preset = theme.animationStyle.keyPressPreset
-            val rect = if (isPressed) {
-                animatedRect(baseRect, preset, pressProgress)
+            val baseStyle = themeManager?.resolveKeyStyle(theme, geometry.spec, rowIndex) ?: theme.defaultKeyStyle
+            val style = if (geometry.spec.code == KeyCodes.SHIFT && shiftState != ShiftState.OFF) {
+                baseStyle.copy(
+                    fill = theme.popupStyle.fill,
+                    labelColor = theme.popupStyle.labelColor,
+                    iconColor = theme.popupStyle.labelColor,
+                    border = theme.popupStyle.border,
+                )
             } else {
-                baseRect
+                baseStyle
             }
-            val radius = context.dp(style.cornerRadiusDp)
-            fillPaint.color = style.fill.primaryColor().toAndroidColor()
+            val pressed = geometry.spec.id == pressedKeyId
+            val keyRect = visualRect(RectF(geometry.left, geometry.top, geometry.right, geometry.bottom), geometry.spec, rowIndex)
+            val preset = theme.animationStyle.keyPressPreset
+            val renderedRect = if (pressed) animatedSurfaceRect(keyRect, preset, pressProgress) else keyRect
+            val radius = keyCornerRadius(renderedRect, geometry.spec, style)
+            fillPaint.color = animatedKeyColor(
+                style.fill.primaryColor().toAndroidColor(),
+                theme.enterKeyStyle.fill.primaryColor().toAndroidColor(),
+                theme.animationStyle.themeMotionPreset,
+                index * 0.19f,
+                now,
+            )
+            if (pressed && preset == KeyPressAnimationPreset.FLASH) {
+                fillPaint.color = blendArgb(fillPaint.color, 0xFFFFFFFF.toInt(), 0.2f + pressProgress * 0.18f)
+            }
             borderPaint.color = style.border.color.toAndroidColor()
-            borderPaint.strokeWidth = context.dp(style.border.widthDp)
-
-            if (isPressed && preset == KeyPressAnimationPreset.GLOW) {
-                val glowRect = RectF(rect).apply {
-                    inset(-context.dp(2f) * pressProgress, -context.dp(2f) * pressProgress)
-                }
-                glowPaint.color = theme.gestureTrailStyle.color.toAndroidColor()
-                glowPaint.strokeWidth = context.dp(2f + pressProgress * 2f)
-                glowPaint.alpha = (70 + 120 * pressProgress).toInt()
-                canvas.drawRoundRect(glowRect, radius + context.dp(2f), radius + context.dp(2f), glowPaint)
+            borderPaint.strokeWidth = context.dp(style.border.widthDp.coerceAtLeast(0.8f))
+            if (pressed && (preset == KeyPressAnimationPreset.GLOW || preset == KeyPressAnimationPreset.BLOOM)) {
+                drawGlowAccent(
+                    canvas = canvas,
+                    rect = renderedRect,
+                    radius = radius,
+                    accentColor = style.pressHighlightColor.toAndroidColor(),
+                    bloom = preset == KeyPressAnimationPreset.BLOOM,
+                )
             }
-
-            canvas.drawRoundRect(rect, radius, radius, fillPaint)
-            if (style.border.widthDp > 0f) {
-                canvas.drawRoundRect(rect, radius, radius, borderPaint)
+            canvas.drawRoundRect(renderedRect, radius, radius, fillPaint)
+            if (style.border.widthDp > 0f || geometry.spec.kind != KeyKind.CHARACTER) {
+                canvas.drawRoundRect(renderedRect, radius, radius, borderPaint)
             }
-
-            if (isPressed) {
+            if (pressed) {
                 pressedPaint.color = style.pressHighlightColor.toAndroidColor()
                 pressedPaint.alpha = when (preset) {
-                    KeyPressAnimationPreset.POP -> (90 + 70 * pressProgress).toInt()
-                    KeyPressAnimationPreset.LIFT -> (80 + 60 * pressProgress).toInt()
-                    else -> 110
+                    KeyPressAnimationPreset.NONE -> 88
+                    KeyPressAnimationPreset.GLOW -> 78
+                    KeyPressAnimationPreset.BLOOM -> 70
+                    KeyPressAnimationPreset.FLASH -> 150
+                    KeyPressAnimationPreset.SINK -> 92
+                    else -> 118
                 }
-                canvas.drawRoundRect(rect, radius, radius, pressedPaint)
+                canvas.drawRoundRect(renderedRect, radius, radius, pressedPaint)
             }
-
-            labelPaint.color = style.labelColor.toAndroidColor()
-            labelPaint.textSize = context.sp(style.labelSizeSp)
-            labelPaint.isFakeBoldText = style.fontWeight >= 600
-            val baseline = geometry.centerY() - (labelPaint.descent() + labelPaint.ascent()) / 2f
-            canvas.drawText(geometry.spec.label, geometry.centerX(), baseline, labelPaint)
+            drawKeyContent(canvas, renderedRect, geometry.spec, style)
+            drawHintIfNeeded(canvas, renderedRect, geometry.spec, style)
+        }
+        drawPopupPreview(canvas)
+        if (theme.animationStyle.themeMotionPreset != ThemeMotionPreset.NONE) {
+            postInvalidateOnAnimation()
         }
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        val point = TouchPoint(event.x, event.y, event.eventTime)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 parent?.requestDisallowInterceptTouchEvent(true)
-                activePoints = mutableListOf(point)
-                activeKeys = mutableListOf()
-                gestureMode = false
                 downKey = findTapKey(event.x, event.y)
-                gestureEligible = layoutSpec.supportsGlideTyping && downKey?.isGlideLetterKey() == true
                 pressedKeyId = downKey?.spec?.id
-                if (gestureEligible) {
-                    downKey?.let(::appendActiveKey)
-                }
-                animatePress(target = if (pressedKeyId != null) 1f else 0f)
+                handledOnDownKeyId = null
+                popupOverrideText = null
+                animatePress(if (pressedKeyId != null) 1f else 0f)
+                startRepeatIfNeeded(downKey)
+                startLongPressIfNeeded(downKey)
                 invalidate()
                 return true
             }
 
             MotionEvent.ACTION_MOVE -> {
-                activePoints += point
-                if (!gestureMode && gestureEligible && activePoints.size >= 2) {
-                    val first = activePoints.first()
-                    val threshold = max(touchSlop.toFloat(), averageCharacterKeyWidth * 0.2f)
-                    gestureMode = distance(first, point) > threshold
+                val hovered = findTapKey(event.x, event.y)
+                if (hovered?.spec?.id != pressedKeyId) {
+                    pressedKeyId = hovered?.spec?.id
+                    popupOverrideText = null
+                    if (pressedKeyId != null) animatePress(1f) else clearPress()
                 }
-
-                if (gestureMode) {
-                    val gestureKey = findGestureKey(event.x, event.y)
-                    gestureKey?.let(::appendActiveKey)
-                    clearPressImmediately()
-                    interactionListener?.onGestureProgress(activePoints.toList())
-                } else {
-                    val hoveredKey = findTapKey(event.x, event.y)
-                    if (hoveredKey?.spec?.id != pressedKeyId) {
-                        pressedKeyId = hoveredKey?.spec?.id
-                        if (pressedKeyId != null) {
-                            animatePress(target = 1f)
-                        } else {
-                            clearPressImmediately()
-                        }
-                    }
+                if (hovered != null) downKey = hovered
+                if (repeatingKeyId != null && hovered?.spec?.id != repeatingKeyId) {
+                    cancelRepeat(resetHandled = false)
+                }
+                if (longPressKeyId != null && hovered?.spec?.id != longPressKeyId) {
+                    cancelLongPress(resetHandled = false)
                 }
                 invalidate()
                 return true
             }
 
             MotionEvent.ACTION_UP -> {
-                activePoints += point
-                val releaseGestureKey = findGestureKey(event.x, event.y)
-                val releaseTapKey = findTapKey(event.x, event.y)
-                if (gestureMode) {
-                    releaseGestureKey?.let(::appendActiveKey)
-                    val characterKeys = activeKeys.filter { it.spec.kind == KeyKind.CHARACTER }
-                    if (characterKeys.size > 1) {
-                        interactionListener?.onGestureCompleted(
-                            GestureSample(
-                                points = activePoints.toList(),
-                                traversedKeys = characterKeys,
-                                allKeys = geometries,
-                            ),
-                        )
-                        clearInteractionState(clearPressedNow = true)
-                        return true
-                    }
-                }
-
-                val tapKey = releaseTapKey ?: downKey
-                if (tapKey != null) {
+                val tapKey = findTapKey(event.x, event.y) ?: downKey
+                if (tapKey != null && tapKey.spec.id != handledOnDownKeyId) {
                     interactionListener?.onKeyTapped(tapKey.spec)
-                    finishTapInteraction()
-                    return true
                 }
-                clearInteractionState(clearPressedNow = true)
+                finishInteraction()
                 return true
             }
 
             MotionEvent.ACTION_CANCEL -> {
-                clearInteractionState(clearPressedNow = true)
+                finishInteraction()
                 return true
             }
         }
         return super.onTouchEvent(event)
+    }
+
+    override fun onDetachedFromWindow() {
+        cancelRepeat()
+        cancelLongPress()
+        super.onDetachedFromWindow()
     }
 
     private fun recomputeGeometry(width: Int, height: Int) {
@@ -227,163 +255,304 @@ class KeyboardCanvasView @JvmOverloads constructor(
             averageCharacterKeyHeight = 0f
             return
         }
-
-        val metrics = theme.layoutMetrics
-        val padding = context.dp(metrics.keyboardPaddingDp)
-        val keyGap = context.dp(metrics.keyGapDp)
-        val rowGap = context.dp(metrics.rowGapDp)
+        val padding = context.dp((theme.layoutMetrics.keyboardPaddingDp - 1f).coerceAtLeast(3f))
+        val keyGap = context.dp((theme.layoutMetrics.keyGapDp - 1.5f).coerceAtLeast(3.2f))
+        val rowGap = context.dp((theme.layoutMetrics.rowGapDp - 1f).coerceAtLeast(3.8f))
         val availableWidth = width - padding * 2f
         val totalRowWeight = layoutSpec.rows.sumOf { it.heightWeight.toDouble() }.toFloat().coerceAtLeast(1f)
         val availableHeight = height - padding * 2f - rowGap * (layoutSpec.rows.size - 1).coerceAtLeast(0)
-        val globalUnitWidth = layoutSpec.rows.minOf { row ->
-            val totalKeyWeight = row.keys.sumOf { it.widthWeight.toDouble() }.toFloat().coerceAtLeast(1f)
-            (availableWidth - keyGap * (row.keys.size - 1).coerceAtLeast(0)) / totalKeyWeight
+        val widestRowUnitWeight = layoutSpec.rows.maxOf { row ->
+            row.leadingInsetWeight + row.trailingInsetWeight + row.keys.sumOf { it.widthWeight.toDouble() }.toFloat()
         }.coerceAtLeast(1f)
-
+        val widestRowKeyCount = layoutSpec.rows.maxOf { it.keys.size }
+        val baseUnitWidth = (availableWidth - keyGap * (widestRowKeyCount - 1).coerceAtLeast(0)) / widestRowUnitWeight
         var currentTop = padding
         val mapped = mutableListOf<KeyGeometry>()
-
         layoutSpec.rows.forEach { row ->
             val rowHeight = availableHeight * (row.heightWeight / totalRowWeight)
-            val totalKeyWeight = row.keys.sumOf { it.widthWeight.toDouble() }.toFloat().coerceAtLeast(1f)
-            val rowContentWidth = totalKeyWeight * globalUnitWidth + keyGap * (row.keys.size - 1).coerceAtLeast(0)
-            var currentLeft = padding + ((availableWidth - rowContentWidth) / 2f)
-
+            val rowUnitWeight = row.leadingInsetWeight + row.trailingInsetWeight + row.keys.sumOf { it.widthWeight.toDouble() }.toFloat()
+            var rowLeft = padding + ((widestRowUnitWeight - rowUnitWeight) * baseUnitWidth / 2f) + row.leadingInsetWeight * baseUnitWidth
             row.keys.forEach { key ->
-                val keyWidth = globalUnitWidth * key.widthWeight
-                mapped += KeyGeometry(
-                    spec = key,
-                    left = currentLeft,
-                    top = currentTop,
-                    right = currentLeft + keyWidth,
-                    bottom = currentTop + rowHeight,
-                )
-                currentLeft += keyWidth + keyGap
+                val keyWidth = baseUnitWidth * key.widthWeight
+                mapped += KeyGeometry(key, rowLeft, currentTop, rowLeft + keyWidth, currentTop + rowHeight)
+                rowLeft += keyWidth + keyGap
             }
             currentTop += rowHeight + rowGap
         }
-
         geometries = mapped
-        val characterKeys = mapped.filter { it.isGlideLetterKey() }
-        averageCharacterKeyWidth = characterKeys
-            .map { it.right - it.left }
-            .average()
-            .toFloat()
-            .coerceAtLeast(context.dp(32f))
-        averageCharacterKeyHeight = characterKeys
-            .map { it.bottom - it.top }
-            .average()
-            .toFloat()
-            .coerceAtLeast(context.dp(40f))
-    }
-
-    private fun appendActiveKey(geometry: KeyGeometry) {
-        if (!geometry.isGlideLetterKey()) return
-        if (activeKeys.lastOrNull()?.spec?.id != geometry.spec.id) {
-            activeKeys += geometry
-        }
+        val charKeys = mapped.filter { it.spec.kind == KeyKind.CHARACTER }
+        averageCharacterKeyWidth = charKeys.map { it.right - it.left }.average().toFloat().coerceAtLeast(context.dp(36f))
+        averageCharacterKeyHeight = charKeys.map { it.bottom - it.top }.average().toFloat().coerceAtLeast(context.dp(44f))
     }
 
     private fun findTapKey(x: Float, y: Float): KeyGeometry? {
         if (geometries.isEmpty()) return null
-        val adjustedY = y - context.dp(6f)
+        val adjustedY = y - context.dp(4f)
         val candidates = geometries.filter { geometry ->
-            val expandX = if (geometry.spec.kind == KeyKind.CHARACTER) averageCharacterKeyWidth * 0.16f else context.dp(8f)
-            val expandTop = if (geometry.spec.kind == KeyKind.CHARACTER) averageCharacterKeyHeight * 0.18f else context.dp(8f)
-            val expandBottom = if (geometry.spec.kind == KeyKind.CHARACTER) averageCharacterKeyHeight * 0.10f else context.dp(8f)
-            adjustedXInBounds(x, geometry, expandX) &&
-                adjustedY in (geometry.top - expandTop)..(geometry.bottom + expandBottom)
+            val expandX = if (geometry.spec.kind == KeyKind.CHARACTER) averageCharacterKeyWidth * 0.28f else context.dp(12f)
+            val expandY = if (geometry.spec.kind == KeyKind.CHARACTER) averageCharacterKeyHeight * 0.2f else context.dp(10f)
+            x in (geometry.left - expandX)..(geometry.right + expandX) &&
+                adjustedY in (geometry.top - expandY)..(geometry.bottom + expandY)
         }
-
         if (candidates.isNotEmpty()) {
-            return candidates.minByOrNull { geometry -> weightedDistanceToKey(x, adjustedY, geometry) }
+            return candidates.minByOrNull { weightedDistanceToKey(x, adjustedY, it) }
         }
-
-        return geometries
-            .minByOrNull { geometry -> weightedDistanceToKey(x, adjustedY, geometry) }
-            ?.takeIf { geometry ->
-                weightedDistanceToKey(x, adjustedY, geometry) <= averageCharacterKeyWidth * 0.92f
-            }
+        return geometries.minByOrNull { weightedDistanceToKey(x, adjustedY, it) }
     }
 
-    private fun findGestureKey(x: Float, y: Float): KeyGeometry? {
-        val characterKeys = geometries.filter { it.isGlideLetterKey() }
-        if (characterKeys.isEmpty()) return null
-        val adjustedY = y - context.dp(8f)
-        val candidates = characterKeys.filter { geometry ->
-            adjustedXInBounds(x, geometry, averageCharacterKeyWidth * 0.34f) &&
-                adjustedY in
-                (geometry.top - averageCharacterKeyHeight * 0.25f)..(geometry.bottom + averageCharacterKeyHeight * 0.18f)
-        }
-
-        val target = if (candidates.isNotEmpty()) {
-            candidates.minByOrNull { geometry -> weightedDistanceToKey(x, adjustedY, geometry) }
-        } else {
-            characterKeys.minByOrNull { geometry -> weightedDistanceToKey(x, adjustedY, geometry) }
-        }
-
-        return target?.takeIf {
-            weightedDistanceToKey(x, adjustedY, it) <= averageCharacterKeyWidth * 0.95f
-        }
-    }
-
-    private fun adjustedXInBounds(
-        x: Float,
-        geometry: KeyGeometry,
-        expandX: Float,
-    ): Boolean = x in (geometry.left - expandX)..(geometry.right + expandX)
-
-    private fun weightedDistanceToKey(
-        x: Float,
-        y: Float,
-        geometry: KeyGeometry,
-    ): Float {
+    private fun weightedDistanceToKey(x: Float, y: Float, geometry: KeyGeometry): Float {
         val dx = x - geometry.centerX()
-        val dy = (y - geometry.centerY()) * 1.12f
+        val dy = (y - geometry.centerY()) * 1.04f
         return hypot(dx, dy)
     }
 
-    private fun distance(start: TouchPoint, end: TouchPoint): Float = hypot(start.x - end.x, start.y - end.y)
-
-    private fun finishTapInteraction() {
-        activePoints.clear()
-        activeKeys.clear()
-        gestureMode = false
-        gestureEligible = false
-        downKey = null
-        interactionListener?.onInteractionFinished()
-        animatePress(target = 0f, clearOnEnd = true)
+    private fun visualRect(base: RectF, key: KeyboardKeySpec, rowIndex: Int): RectF {
+        val rect = RectF(base)
+        val isBottomRow = rowIndex == layoutSpec.rows.lastIndex
+        val horizontalInset = when {
+            key.code == KeyCodes.SPACE -> 2.2f
+            key.code == KeyCodes.MODE_EMOJI -> 3.2f
+            key.code == KeyCodes.SHIFT || key.code == KeyCodes.BACKSPACE || key.code == KeyCodes.ENTER -> 2.8f
+            key.kind == KeyKind.CHARACTER -> 1.6f
+            else -> 2.8f
+        }
+        val verticalInset = when {
+            isBottomRow -> 5.1f
+            key.kind == KeyKind.CHARACTER -> 2.9f
+            else -> 4.1f
+        }
+        rect.inset(context.dp(horizontalInset), context.dp(verticalInset))
+        return rect
     }
 
-    private fun clearInteractionState(clearPressedNow: Boolean) {
-        activePoints.clear()
-        activeKeys.clear()
-        gestureMode = false
-        gestureEligible = false
-        downKey = null
-        if (clearPressedNow) {
-            clearPressImmediately()
+    private fun drawKeyContent(
+        canvas: Canvas,
+        rect: RectF,
+        key: KeyboardKeySpec,
+        style: com.paletteboard.domain.model.KeyStyle,
+    ) {
+        when (key.code) {
+            KeyCodes.SHIFT -> drawShiftIcon(canvas, rect, style.labelColor.toAndroidColor(), shiftState == ShiftState.LOCKED)
+            KeyCodes.BACKSPACE -> drawBackspaceIcon(canvas, rect, style.labelColor.toAndroidColor())
+            KeyCodes.ENTER -> {
+                if (key.label.length <= 2) {
+                    drawEnterIcon(canvas, rect, style.labelColor.toAndroidColor())
+                } else {
+                    drawLabel(canvas, rect, key, style)
+                }
+            }
+            KeyCodes.LANGUAGE_SWITCH -> drawLanguageIcon(canvas, rect, style.labelColor.toAndroidColor())
+            else -> drawLabel(canvas, rect, key, style)
         }
+    }
+
+    private fun drawLabel(
+        canvas: Canvas,
+        rect: RectF,
+        key: KeyboardKeySpec,
+        style: com.paletteboard.domain.model.KeyStyle,
+    ) {
+        labelPaint.color = style.labelColor.toAndroidColor()
+        labelPaint.textSize = context.sp(labelSizeFor(key, style.labelSizeSp))
+        labelPaint.isFakeBoldText = style.fontWeight >= 600
+        val baseline = rect.centerY() - (labelPaint.descent() + labelPaint.ascent()) / 2f
+        canvas.drawText(displayLabelForKey(key), rect.centerX(), baseline, labelPaint)
+    }
+
+    private fun drawHintIfNeeded(
+        canvas: Canvas,
+        rect: RectF,
+        key: KeyboardKeySpec,
+        style: com.paletteboard.domain.model.KeyStyle,
+    ) {
+        val hint = key.hintLabel ?: return
+        if (key.kind != KeyKind.CHARACTER && key.id != "space") return
+        hintPaint.color = style.labelColor.toAndroidColor()
+        hintPaint.alpha = if (key.id == "space") 140 else 176
+        hintPaint.textSize = context.sp(if (key.id == "space") 8.5f else 9.5f)
+        hintPaint.isFakeBoldText = true
+        canvas.drawText(hint, rect.right - context.dp(6f), rect.top + context.dp(if (key.id == "space") 13f else 11f), hintPaint)
+    }
+
+    private fun drawPopupPreview(canvas: Canvas) {
+        if (!popupPreviewEnabled) return
+        val text = popupOverrideText ?: return
+        val keyId = pressedKeyId ?: return
+        val geometry = geometries.firstOrNull { it.spec.id == keyId } ?: return
+        if (geometry.spec.code == KeyCodes.SHIFT || geometry.spec.code == KeyCodes.BACKSPACE || geometry.spec.code == KeyCodes.ENTER) return
+        val rowIndex = rowIndexForGeometry(geometries.indexOf(geometry))
+        val rect = visualRect(RectF(geometry.left, geometry.top, geometry.right, geometry.bottom), geometry.spec, rowIndex)
+        labelPaint.color = theme.popupStyle.labelColor.toAndroidColor()
+        labelPaint.textSize = context.sp(max(24f, theme.defaultKeyStyle.labelSizeSp + 5f))
+        labelPaint.isFakeBoldText = true
+        val bubbleWidth = max(rect.width() * 1.08f, labelPaint.measureText(text) + context.dp(28f))
+        val bubbleHeight = max(rect.height() * 1.18f, context.dp(62f))
+        val bubble = RectF(
+            (rect.centerX() - bubbleWidth / 2f).coerceIn(context.dp(4f), width - bubbleWidth - context.dp(4f)),
+            max(context.dp(4f), rect.top - bubbleHeight - context.dp(8f)),
+            0f,
+            0f,
+        )
+        bubble.right = bubble.left + bubbleWidth
+        bubble.bottom = bubble.top + bubbleHeight
+        popupPaint.color = theme.popupStyle.fill.primaryColor().toAndroidColor()
+        popupBorderPaint.color = theme.popupStyle.border.color.toAndroidColor()
+        popupBorderPaint.strokeWidth = context.dp(theme.popupStyle.border.widthDp.coerceAtLeast(1f))
+        canvas.drawRoundRect(bubble, context.dp(14f), context.dp(14f), popupPaint)
+        canvas.drawRoundRect(bubble, context.dp(14f), context.dp(14f), popupBorderPaint)
+        val path = Path().apply {
+            val pointerCenter = rect.centerX().coerceIn(bubble.left + context.dp(16f), bubble.right - context.dp(16f))
+            moveTo(pointerCenter - context.dp(7f), bubble.bottom - context.dp(2f))
+            lineTo(pointerCenter, bubble.bottom + context.dp(9f))
+            lineTo(pointerCenter + context.dp(7f), bubble.bottom - context.dp(2f))
+            close()
+        }
+        canvas.drawPath(path, popupPaint)
+        canvas.drawPath(path, popupBorderPaint)
+        val baseline = bubble.centerY() - (labelPaint.descent() + labelPaint.ascent()) / 2f
+        canvas.drawText(text, bubble.centerX(), baseline, labelPaint)
+    }
+
+    private fun drawLanguageIcon(canvas: Canvas, rect: RectF, color: Int) {
+        val radius = minOf(rect.width(), rect.height()) * 0.19f
+        iconPaint.color = color
+        iconPaint.strokeWidth = context.dp(1.7f)
+        canvas.drawCircle(rect.centerX(), rect.centerY(), radius, iconPaint)
+        canvas.drawLine(rect.centerX(), rect.centerY() - radius, rect.centerX(), rect.centerY() + radius, iconPaint)
+        canvas.drawLine(rect.centerX() - radius, rect.centerY(), rect.centerX() + radius, rect.centerY(), iconPaint)
+    }
+
+    private fun drawEnterIcon(canvas: Canvas, rect: RectF, color: Int) {
+        val left = rect.left + rect.width() * 0.28f
+        val right = rect.right - rect.width() * 0.24f
+        val midY = rect.centerY() + context.dp(1f)
+        val top = rect.top + rect.height() * 0.3f
+        val path = Path().apply {
+            moveTo(right, top)
+            lineTo(right, midY)
+            lineTo(left + context.dp(8f), midY)
+            moveTo(left, midY)
+            lineTo(left + context.dp(7f), midY - context.dp(6f))
+            moveTo(left, midY)
+            lineTo(left + context.dp(7f), midY + context.dp(6f))
+        }
+        iconPaint.color = color
+        iconPaint.strokeWidth = context.dp(2f)
+        canvas.drawPath(path, iconPaint)
+    }
+
+    private fun drawShiftIcon(canvas: Canvas, rect: RectF, color: Int, locked: Boolean) {
+        val cx = rect.centerX()
+        val top = rect.top + rect.height() * 0.24f
+        val midY = rect.centerY()
+        val bottom = rect.bottom - rect.height() * 0.22f
+        val wing = rect.width() * 0.16f
+        val path = Path().apply {
+            moveTo(cx, top)
+            lineTo(cx - wing, midY)
+            lineTo(cx - wing * 0.42f, midY)
+            lineTo(cx - wing * 0.42f, bottom)
+            lineTo(cx + wing * 0.42f, bottom)
+            lineTo(cx + wing * 0.42f, midY)
+            lineTo(cx + wing, midY)
+            close()
+        }
+        iconPaint.color = color
+        iconPaint.strokeWidth = context.dp(1.9f)
+        canvas.drawPath(path, iconPaint)
+        if (locked) {
+            canvas.drawLine(rect.left + rect.width() * 0.3f, rect.bottom - rect.height() * 0.16f, rect.right - rect.width() * 0.3f, rect.bottom - rect.height() * 0.16f, iconPaint)
+        }
+    }
+
+    private fun drawBackspaceIcon(canvas: Canvas, rect: RectF, color: Int) {
+        val left = rect.left + rect.width() * 0.22f
+        val right = rect.right - rect.width() * 0.2f
+        val top = rect.top + rect.height() * 0.32f
+        val bottom = rect.bottom - rect.height() * 0.32f
+        val path = Path().apply {
+            moveTo(left, rect.centerY())
+            lineTo(left + rect.width() * 0.16f, top)
+            lineTo(right, top)
+            lineTo(right, bottom)
+            lineTo(left + rect.width() * 0.16f, bottom)
+            close()
+        }
+        iconPaint.color = color
+        iconPaint.strokeWidth = context.dp(1.9f)
+        canvas.drawPath(path, iconPaint)
+        canvas.drawLine(rect.centerX() - rect.width() * 0.07f, rect.centerY() - rect.height() * 0.1f, rect.centerX() + rect.width() * 0.07f, rect.centerY() + rect.height() * 0.1f, iconPaint)
+        canvas.drawLine(rect.centerX() - rect.width() * 0.07f, rect.centerY() + rect.height() * 0.1f, rect.centerX() + rect.width() * 0.07f, rect.centerY() - rect.height() * 0.1f, iconPaint)
+    }
+
+    private fun finishInteraction() {
+        cancelRepeat()
+        cancelLongPress()
+        downKey = null
         interactionListener?.onInteractionFinished()
-        invalidate()
+        animatePress(0f, clearOnEnd = true)
+    }
+
+    private fun animatedSurfaceRect(
+        base: RectF,
+        preset: KeyPressAnimationPreset,
+        progress: Float,
+    ): RectF {
+        val rect = RectF(base)
+        val insetX = rect.width() * 0.035f * progress
+        val insetY = rect.height() * 0.06f * progress
+        return when (preset) {
+            KeyPressAnimationPreset.NONE -> rect
+            KeyPressAnimationPreset.SCALE -> rect.apply { inset(insetX, insetY) }
+            KeyPressAnimationPreset.POP -> rect.apply { inset(-insetX * 0.55f, -insetY * 0.4f) }
+            KeyPressAnimationPreset.LIFT -> rect.apply { offset(0f, -context.dp(4f) * progress) }
+            KeyPressAnimationPreset.GLOW -> rect
+            KeyPressAnimationPreset.SLIDE -> rect.apply { offset(0f, context.dp(3f) * progress) }
+            KeyPressAnimationPreset.FLASH -> rect
+            KeyPressAnimationPreset.SINK -> rect.apply {
+                inset(insetX * 0.55f, insetY * 0.55f)
+                offset(0f, context.dp(2.6f) * progress)
+            }
+            KeyPressAnimationPreset.BLOOM -> rect.apply { inset(-insetX * 0.8f, -insetY * 0.62f) }
+        }
+    }
+
+    private fun drawGlowAccent(
+        canvas: Canvas,
+        rect: RectF,
+        radius: Float,
+        accentColor: Int,
+        bloom: Boolean,
+    ) {
+        val glowRect = RectF(rect).apply {
+            val expand = if (bloom) context.dp(3.2f) else context.dp(2f)
+            inset(-expand * pressProgress, -expand * pressProgress)
+        }
+        popupBorderPaint.color = accentColor
+        popupBorderPaint.alpha = if (bloom) 150 else 118
+        popupBorderPaint.strokeWidth = context.dp(if (bloom) 2.8f else 2f)
+        canvas.drawRoundRect(
+            glowRect,
+            radius + context.dp(if (bloom) 3f else 2f),
+            radius + context.dp(if (bloom) 3f else 2f),
+            popupBorderPaint,
+        )
     }
 
     private fun animatePress(target: Float, clearOnEnd: Boolean = false) {
         pressAnimator?.cancel()
         pressAnimator = ValueAnimator.ofFloat(pressProgress, target).apply {
-            duration = (theme.animationStyle.durationMs / 1.35f).toLong().coerceAtLeast(70L)
-            addUpdateListener { animator ->
-                pressProgress = animator.animatedValue as Float
+            duration = 90L
+            addUpdateListener {
+                pressProgress = it.animatedValue as Float
                 invalidate()
             }
             if (clearOnEnd) {
                 addListener(
                     object : AnimatorListenerAdapter() {
                         override fun onAnimationEnd(animation: Animator) {
-                            if (pressProgress <= 0.01f) {
-                                pressedKeyId = null
-                                invalidate()
-                            }
+                            if (pressProgress <= 0.01f) pressedKeyId = null
+                            invalidate()
                         }
                     },
                 )
@@ -392,40 +561,129 @@ class KeyboardCanvasView @JvmOverloads constructor(
         }
     }
 
-    private fun clearPressImmediately() {
+    private fun clearPress() {
         pressAnimator?.cancel()
         pressProgress = 0f
         pressedKeyId = null
     }
 
-    private fun animatedRect(
-        base: RectF,
-        preset: KeyPressAnimationPreset,
-        progress: Float,
-    ): RectF {
-        val rect = RectF(base)
-        val insetX = rect.width() * 0.03f * progress
-        val insetY = rect.height() * 0.06f * progress
-        return when (preset) {
-            KeyPressAnimationPreset.NONE -> rect
-            KeyPressAnimationPreset.SCALE -> rect.apply { inset(insetX, insetY) }
-            KeyPressAnimationPreset.POP -> rect.apply { inset(-insetX * 0.55f, -insetY * 0.35f) }
-            KeyPressAnimationPreset.LIFT -> rect.apply { offset(0f, -context.dp(5f) * progress) }
-            KeyPressAnimationPreset.GLOW -> rect
-            KeyPressAnimationPreset.SLIDE -> rect.apply { offset(0f, context.dp(4f) * progress) }
+    private fun keyCornerRadius(
+        rect: RectF,
+        key: KeyboardKeySpec,
+        style: com.paletteboard.domain.model.KeyStyle,
+    ): Float {
+        val styleRadius = context.dp(style.cornerRadiusDp)
+        return when (style.shape) {
+            KeyShapeStyle.PILL -> rect.height() / 2f
+            KeyShapeStyle.SQUARED -> minOf(styleRadius, rect.height() * 0.18f)
+            KeyShapeStyle.BUBBLE -> minOf(styleRadius + context.dp(4f), rect.height() * 0.34f)
+            KeyShapeStyle.GLASS -> minOf(styleRadius + context.dp(2f), rect.height() * 0.28f)
+            KeyShapeStyle.ROUNDED -> when (key.id) {
+                "space" -> minOf(styleRadius, rect.height() * 0.26f)
+                else -> minOf(styleRadius, rect.height() * 0.2f)
+            }
         }
     }
 
-    private fun rowIndexForGeometry(geometryIndex: Int): Int {
-        var runningIndex = 0
+    private fun labelSizeFor(key: KeyboardKeySpec, base: Float): Float = when {
+        key.id == "space" -> base - 3.6f
+        key.code == KeyCodes.ENTER && key.label.length > 2 -> base - 5.4f
+        key.code == KeyCodes.MODE_EMOJI -> base - 0.8f
+        key.label.length >= 5 -> base - 3.2f
+        key.kind != KeyKind.CHARACTER && key.label.length > 1 -> base - 1.6f
+        else -> base
+    }.coerceAtLeast(14f)
+
+    private fun displayLabelForKey(key: KeyboardKeySpec): String {
+        return if (key.kind == KeyKind.CHARACTER && key.label.length == 1 && shiftState != ShiftState.OFF) {
+            key.label.uppercase()
+        } else {
+            key.label
+        }
+    }
+
+    private fun previewTextForKey(key: KeyboardKeySpec): String = displayLabelForKey(key)
+
+    private fun animatedKeyColor(baseColor: Int, accentColor: Int, motionPreset: ThemeMotionPreset, seed: Float, now: Long): Int {
+        if (motionPreset == ThemeMotionPreset.NONE) return baseColor
+        val duration = theme.animationStyle.motionDurationMs.coerceAtLeast(1200)
+        val phase = ((now % duration).toFloat() / duration.toFloat()) + seed
+        val wave = ((sin(phase * Math.PI * 2) + 1f) / 2f).toFloat()
+        return when (motionPreset) {
+            ThemeMotionPreset.AURORA -> blendArgb(baseColor, accentColor, 0.14f + wave * 0.2f)
+            ThemeMotionPreset.SHIMMER -> blendArgb(baseColor, 0xFFFFFFFF.toInt(), 0.08f + wave * 0.18f)
+            ThemeMotionPreset.PULSE -> blendArgb(baseColor, accentColor, wave * 0.18f)
+            ThemeMotionPreset.SPECTRUM -> blendArgb(baseColor, accentColor, 0.1f + wave * 0.22f)
+            ThemeMotionPreset.NONE -> baseColor
+        }
+    }
+
+    private fun startRepeatIfNeeded(key: KeyGeometry?) {
+        cancelRepeat(resetHandled = false)
+        if (key?.spec?.code != KeyCodes.BACKSPACE) return
+        handledOnDownKeyId = key.spec.id
+        repeatingKeyId = key.spec.id
+        interactionListener?.onKeyTapped(key.spec)
+        postDelayed(repeatBackspaceRunnable, BACKSPACE_REPEAT_INITIAL_DELAY_MS)
+    }
+
+    private fun cancelRepeat(resetHandled: Boolean = true) {
+        removeCallbacks(repeatBackspaceRunnable)
+        repeatingKeyId = null
+        if (resetHandled) handledOnDownKeyId = null
+    }
+
+    private fun startLongPressIfNeeded(key: KeyGeometry?) {
+        cancelLongPress(resetHandled = false)
+        val spec = key?.spec ?: return
+        if (spec.code == KeyCodes.BACKSPACE) return
+        if (longPressVariantFor(spec) == null) return
+        longPressKeyId = spec.id
+        postDelayed(longPressRunnable, LONG_PRESS_DELAY_MS)
+    }
+
+    private fun cancelLongPress(resetHandled: Boolean = true) {
+        removeCallbacks(longPressRunnable)
+        longPressKeyId = null
+        popupOverrideText = null
+        if (resetHandled && repeatingKeyId == null) handledOnDownKeyId = null
+    }
+
+    private fun longPressVariantFor(key: KeyboardKeySpec): KeyboardKeySpec? = when {
+        key.code == KeyCodes.SPACE -> key.copy(
+            id = "${key.id}_language",
+            label = "\uD83C\uDF10",
+            commitText = null,
+            code = KeyCodes.LANGUAGE_SWITCH,
+            kind = KeyKind.FUNCTION,
+            hintLabel = null,
+        )
+        key.popupChars.isNotEmpty() -> {
+            val alt = key.popupChars.first()
+            key.copy(
+                id = "${key.id}_alt",
+                label = alt,
+                commitText = alt,
+                code = alt.firstOrNull()?.code ?: key.code,
+                hintLabel = null,
+            )
+        }
+        else -> null
+    }
+
+    private fun rowIndexForGeometry(index: Int): Int {
+        var running = 0
         layoutSpec.rows.forEachIndexed { rowIndex, row ->
-            val rowEnd = runningIndex + row.keys.size
-            if (geometryIndex in runningIndex until rowEnd) return rowIndex
-            runningIndex = rowEnd
+            val rowEnd = running + row.keys.size
+            if (index in running until rowEnd) return rowIndex
+            running = rowEnd
         }
         return 0
     }
-}
 
-private fun KeyGeometry.isGlideLetterKey(): Boolean = spec.kind == KeyKind.CHARACTER &&
-    spec.label.firstOrNull()?.isLetter() == true
+    private companion object {
+        const val BACKSPACE_REPEAT_INITIAL_DELAY_MS = 325L
+        const val BACKSPACE_REPEAT_INTERVAL_MS = 65L
+        const val LONG_PRESS_DELAY_MS = 360L
+    }
+}

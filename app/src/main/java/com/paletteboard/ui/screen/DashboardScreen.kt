@@ -100,8 +100,11 @@ fun DashboardScreen(
                 ) {
                     TagChip(label = uiState.activeTheme.animationStyle.keyPressPreset.displayName())
                     TagChip(label = uiState.activeTheme.animationStyle.keyboardTransitionPreset.displayName())
+                    if (uiState.activeTheme.animationStyle.themeMotionPreset != com.paletteboard.domain.model.ThemeMotionPreset.NONE) {
+                        TagChip(label = uiState.activeTheme.animationStyle.themeMotionPreset.displayName())
+                    }
                     TagChip(label = if (uiState.settings.showNumberRow) "Number row on" else "Number row off")
-                    TagChip(label = if (uiState.settings.gestureSettings.enabled) "Glide on" else "Glide off")
+                    TagChip(label = "Tap-first typing")
                 }
                 Button(
                     onClick = onOpenThemeBuilder,
@@ -154,7 +157,7 @@ fun DashboardScreen(
                 )
                 NavigationTile(
                     title = "Theme Builder",
-                    subtitle = "Adjust shape, spacing, label sizing, animation, and gesture trail styling.",
+                    subtitle = "Adjust shape, spacing, label sizing, and animation until the keyboard feels exactly right.",
                     icon = Icons.Rounded.Tune,
                     onClick = onOpenThemeBuilder,
                     actionLabel = "Create",

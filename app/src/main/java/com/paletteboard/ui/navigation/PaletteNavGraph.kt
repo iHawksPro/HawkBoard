@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Palette
@@ -37,9 +38,10 @@ import androidx.navigation.compose.rememberNavController
 import com.paletteboard.domain.model.KeyboardTransitionPreset
 import com.paletteboard.domain.model.KeyPressAnimationPreset
 import com.paletteboard.domain.model.Theme
+import com.paletteboard.domain.model.ThemeMotionPreset
 import com.paletteboard.domain.model.ToolbarAction
 import com.paletteboard.ui.screen.DashboardScreen
-import com.paletteboard.ui.screen.GestureSettingsScreen
+import com.paletteboard.ui.screen.EffectsStudioScreen
 import com.paletteboard.ui.screen.ImportExportScreen
 import com.paletteboard.ui.screen.KeyboardSettingsScreen
 import com.paletteboard.ui.screen.SoundHapticSettingsScreen
@@ -71,14 +73,16 @@ fun PaletteNavGraph(
     onPrimaryColorChanged: (Long) -> Unit,
     onFunctionColorChanged: (Long) -> Unit,
     onBackgroundColorChanged: (Long) -> Unit,
-    onTrailColorChanged: (Long) -> Unit,
     onKeyPressAnimationChanged: (KeyPressAnimationPreset) -> Unit,
     onKeyboardTransitionAnimationChanged: (KeyboardTransitionPreset) -> Unit,
+    onThemeMotionChanged: (ThemeMotionPreset) -> Unit,
     onAnimationDurationChanged: (Int) -> Unit,
     onKeyboardHeightScaleChanged: (Float) -> Unit,
     onNumberRowChanged: (Boolean) -> Unit,
-    onGlideTypingChanged: (Boolean) -> Unit,
-    onGestureSensitivityChanged: (Float) -> Unit,
+    onAutoCapitalizationChanged: (Boolean) -> Unit,
+    onSuggestionsChanged: (Boolean) -> Unit,
+    onAutoCorrectionChanged: (Boolean) -> Unit,
+    onPopupPreviewChanged: (Boolean) -> Unit,
     onToolbarActionEnabledChanged: (ToolbarAction, Boolean) -> Unit,
     onSoundPackChanged: (String) -> Unit,
     onHapticProfileChanged: (String) -> Unit,
@@ -93,6 +97,7 @@ fun PaletteNavGraph(
         TopLevelDestination(Destination.Dashboard.route, "Home", Icons.Rounded.Home),
         TopLevelDestination(Destination.Themes.route, "Themes", Icons.Rounded.Palette),
         TopLevelDestination(Destination.Builder.route, "Builder", Icons.Rounded.Tune),
+        TopLevelDestination(Destination.Effects.route, "Effects", Icons.Rounded.Bolt),
         TopLevelDestination(Destination.Settings.route, "Settings", Icons.Rounded.Settings),
     )
 
@@ -225,13 +230,27 @@ fun PaletteNavGraph(
                         onPrimaryColorChanged = onPrimaryColorChanged,
                         onFunctionColorChanged = onFunctionColorChanged,
                         onBackgroundColorChanged = onBackgroundColorChanged,
-                        onTrailColorChanged = onTrailColorChanged,
                         onKeyPressAnimationChanged = onKeyPressAnimationChanged,
                         onKeyboardTransitionAnimationChanged = onKeyboardTransitionAnimationChanged,
+                        onThemeMotionChanged = onThemeMotionChanged,
                         onAnimationDurationChanged = onAnimationDurationChanged,
                         onSaveTheme = onSaveDraft,
                         onReset = onResetDraft,
                         onRandomize = onRandomizeDraft,
+                    )
+                }
+                composable(Destination.Effects.route) {
+                    EffectsStudioScreen(
+                        uiState = uiState,
+                        onKeyPressAnimationChanged = onKeyPressAnimationChanged,
+                        onKeyboardTransitionAnimationChanged = onKeyboardTransitionAnimationChanged,
+                        onThemeMotionChanged = onThemeMotionChanged,
+                        onAnimationDurationChanged = onAnimationDurationChanged,
+                        onPopupPreviewChanged = onPopupPreviewChanged,
+                        onSoundPackChanged = onSoundPackChanged,
+                        onHapticProfileChanged = onHapticProfileChanged,
+                        onSaveTheme = onSaveDraft,
+                        onReset = onResetDraft,
                     )
                 }
                 composable(Destination.Settings.route) {
@@ -239,18 +258,13 @@ fun PaletteNavGraph(
                         uiState = uiState,
                         onKeyboardHeightScaleChanged = onKeyboardHeightScaleChanged,
                         onNumberRowChanged = onNumberRowChanged,
-                        onGlideTypingChanged = onGlideTypingChanged,
-                        onOpenGestureSettings = { navController.navigate(Destination.Gesture.route) },
+                        onAutoCapitalizationChanged = onAutoCapitalizationChanged,
+                        onSuggestionsChanged = onSuggestionsChanged,
+                        onAutoCorrectionChanged = onAutoCorrectionChanged,
+                        onPopupPreviewChanged = onPopupPreviewChanged,
                         onOpenToolbarSettings = { navController.navigate(Destination.Toolbar.route) },
                         onOpenSoundSettings = { navController.navigate(Destination.Sound.route) },
                         onOpenImportExport = { navController.navigate(Destination.ImportExport.route) },
-                    )
-                }
-                composable(Destination.Gesture.route) {
-                    GestureSettingsScreen(
-                        uiState = uiState,
-                        onGlideTypingChanged = onGlideTypingChanged,
-                        onGestureSensitivityChanged = onGestureSensitivityChanged,
                     )
                 }
                 composable(Destination.Toolbar.route) {
@@ -282,8 +296,8 @@ fun PaletteNavGraph(
 private fun screenHeaderForRoute(route: String?): ScreenHeader = when (route) {
     Destination.Themes.route -> ScreenHeader("Theme Library", "Presets, custom themes, and quick swapping")
     Destination.Builder.route -> ScreenHeader("Theme Builder", "Live editing for color, layout, and animation")
+    Destination.Effects.route -> ScreenHeader("Effects Studio", "Press effects, motion, and feedback in one place")
     Destination.Settings.route -> ScreenHeader("Keyboard Settings", "Tune behavior, toolbar, and feedback")
-    Destination.Gesture.route -> ScreenHeader("Gesture Settings", "First-class glide typing controls")
     Destination.Toolbar.route -> ScreenHeader("Toolbar", "Choose the shortcuts above the keys")
     Destination.Sound.route -> ScreenHeader("Sound and Haptics", "Feedback profiles for every typing style")
     Destination.ImportExport.route -> ScreenHeader("Import and Export", "Move and share theme JSON locally")
@@ -305,8 +319,8 @@ private sealed class Destination(val route: String) {
     data object Dashboard : Destination("dashboard")
     data object Themes : Destination("themes")
     data object Builder : Destination("builder")
+    data object Effects : Destination("effects")
     data object Settings : Destination("settings")
-    data object Gesture : Destination("gesture")
     data object Toolbar : Destination("toolbar")
     data object Sound : Destination("sound")
     data object ImportExport : Destination("import_export")

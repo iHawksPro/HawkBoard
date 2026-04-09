@@ -31,18 +31,18 @@ private val PaletteLightColors: ColorScheme = lightColorScheme(
 )
 
 private val PaletteDarkColors: ColorScheme = darkColorScheme(
-    primary = Color(0xFF6EE7B7),
-    onPrimary = Color(0xFF052E16),
-    secondary = Color(0xFFFB7185),
-    onSecondary = Color(0xFF4C0519),
-    tertiary = Color(0xFF67E8F9),
-    background = Color(0xFF050816),
+    primary = Color(0xFF7DD3FC),
+    onPrimary = Color(0xFF07121C),
+    secondary = Color(0xFFFFB86B),
+    onSecondary = Color(0xFF241200),
+    tertiary = Color(0xFF8BDBD0),
+    background = Color(0xFF121A2B),
     onBackground = Color(0xFFF8FAFC),
-    surface = Color(0xFF0E1426),
+    surface = Color(0xFF1B2740),
     onSurface = Color(0xFFF8FAFC),
-    surfaceVariant = Color(0xFF162033),
-    onSurfaceVariant = Color(0xFFAAB8CF),
-    outline = Color(0xFF314158),
+    surfaceVariant = Color(0xFF2A3957),
+    onSurfaceVariant = Color(0xFFE3ECF8),
+    outline = Color(0xFF7086A6),
 )
 
 private val PaletteTypography = Typography(

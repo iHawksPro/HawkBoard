@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="hawk_icon_bg_start">#FFFFFF</color>
-    <color name="hawk_icon_bg_end">#F3F4F6</color>
-    <color name="hawk_icon_glow">#E5E7EB</color>
-    <color name="hawk_icon_primary">#0A0A0A</color>
-    <color name="hawk_icon_secondary">#111111</color>
-    <color name="hawk_icon_accent">#6B7280</color>
+    <color name="hawk_icon_bg_start">#161616</color>
+    <color name="hawk_icon_bg_end">#020202</color>
+    <color name="hawk_icon_glow">#F5F5F5</color>
+    <color name="hawk_icon_primary">#FFFFFF</color>
+    <color name="hawk_icon_secondary">#F3F4F6</color>
+    <color name="hawk_icon_accent">#BFC5CF</color>
+    <color name="hawk_icon_plate">#3A3A40</color>
 </resources>

@@ -1,12 +1,18 @@
 package com.paletteboard.ime.view
 
 import android.content.Context
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.paletteboard.domain.model.OneHandedMode
+import com.paletteboard.domain.model.Theme
 import com.paletteboard.domain.model.ToolbarAction
 import com.paletteboard.domain.model.ToolbarItem
+import com.paletteboard.util.primaryColor
+import com.paletteboard.util.toAndroidColor
 
 class KeyboardToolbarView(context: Context) : HorizontalScrollView(context) {
     private val chipContainer = LinearLayout(context).apply {
@@ -28,28 +34,61 @@ class KeyboardToolbarView(context: Context) : HorizontalScrollView(context) {
         actionListener = listener
     }
 
-    fun setItems(items: List<ToolbarItem>) {
+    fun setItems(
+        items: List<ToolbarItem>,
+        theme: Theme,
+        oneHandedMode: OneHandedMode,
+    ) {
         chipContainer.removeAllViews()
+        val baseChipColor = theme.functionalKeyStyle.fill.primaryColor().toAndroidColor()
+        val activeChipColor = theme.enterKeyStyle.fill.primaryColor().toAndroidColor()
+        val labelColor = theme.toolbarStyle.labelColor.toAndroidColor()
+        val activeLabelColor = theme.enterKeyStyle.labelColor.toAndroidColor()
+        val borderColor = theme.functionalKeyStyle.border.color.toAndroidColor()
+
         items.filter { it.enabled }.forEach { item ->
+            val isActive = item.action == ToolbarAction.ONE_HANDED && oneHandedMode != OneHandedMode.OFF
             chipContainer.addView(
                 TextView(context).apply {
-                    text = item.action.name.replace("_", " ")
+                    text = item.action.toolbarLabel(oneHandedMode)
                     gravity = Gravity.CENTER
                     setPadding(
-                        context.dp(12f).toInt(),
-                        context.dp(8f).toInt(),
-                        context.dp(12f).toInt(),
-                        context.dp(8f).toInt(),
+                        context.dp(14f).toInt(),
+                        context.dp(9f).toInt(),
+                        context.dp(14f).toInt(),
+                        context.dp(9f).toInt(),
                     )
+                    setTypeface(typeface, if (isActive) Typeface.BOLD else Typeface.NORMAL)
+                    setTextColor(if (isActive) activeLabelColor else labelColor)
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = context.dp(theme.toolbarStyle.chipCornerRadiusDp)
+                        setColor(if (isActive) activeChipColor else baseChipColor)
+                        setStroke(context.dp(1f).toInt(), borderColor)
+                    }
                     setOnClickListener { actionListener?.invoke(item.action) }
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                     ).apply {
-                        marginEnd = context.dp(6f).toInt()
+                        marginEnd = context.dp(8f).toInt()
                     }
                 },
             )
         }
     }
+}
+
+private fun ToolbarAction.toolbarLabel(oneHandedMode: OneHandedMode): String = when (this) {
+    ToolbarAction.CLIPBOARD -> "Clipboard"
+    ToolbarAction.EMOJI -> "Emoji"
+    ToolbarAction.THEMES -> "Themes"
+    ToolbarAction.SETTINGS -> "Settings"
+    ToolbarAction.ONE_HANDED -> when (oneHandedMode) {
+        OneHandedMode.OFF -> "One-handed"
+        OneHandedMode.LEFT -> "Left mode"
+        OneHandedMode.RIGHT -> "Right mode"
+    }
+    ToolbarAction.TRANSLATE -> "Translate"
+    ToolbarAction.CALCULATOR -> "Calc"
 }

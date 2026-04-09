@@ -15,6 +15,7 @@ import com.paletteboard.domain.model.LayoutMetrics
 import com.paletteboard.domain.model.RowStyleOverride
 import com.paletteboard.domain.model.ShadowSpec
 import com.paletteboard.domain.model.Theme
+import com.paletteboard.domain.model.ThemeMotionPreset
 import com.paletteboard.domain.model.ToolbarStyle
 
 object DefaultThemes {
@@ -22,26 +23,27 @@ object DefaultThemes {
 
     val midnightPulse: Theme = makeTheme(
         id = DEFAULT_THEME_ID,
-        name = "Hawk Midnight",
-        backgroundFill = gradient(120f, 0xFF020617, 0xFF0F172A, 0xFF0B1120),
-        defaultKeyFill = solid(0xFF1E293B),
-        functionKeyFill = solid(0xFF334155),
-        shiftFill = solid(0xFF0F766E),
-        enterFill = solid(0xFF06B6D4),
-        spaceFill = solid(0xFF0F172A),
-        labelColor = 0xFFF8FAFC,
+        name = "Hawk Graphite",
+        backgroundFill = gradient(180f, 0xFF050505, 0xFF0A0A0B, 0xFF121214),
+        defaultKeyFill = solid(0xFF57575C),
+        functionKeyFill = solid(0xFF1E1E21),
+        shiftFill = solid(0xFF1E1E21),
+        enterFill = solid(0xFF1E1E21),
+        spaceFill = solid(0xFF6A6A70),
+        labelColor = 0xFFF5F5F7,
         shiftLabelColor = 0xFFFFFFFF,
-        enterLabelColor = 0xFF082F49,
-        trailColor = 0xFF22D3EE,
-        toolbarFill = solid(0xFF0B1120),
-        toolbarLabelColor = 0xFFE2E8F0,
+        enterLabelColor = 0xFFF5F5F7,
+        trailColor = 0xFFC4C4C9,
+        toolbarFill = solid(0xFF050505),
+        toolbarLabelColor = 0xFFB7B7BC,
         shape = KeyShapeStyle.ROUNDED,
-        cornerRadius = 18f,
-        keyBorderColor = 0x1FFFFFFF,
-        functionBorderColor = 0x24E2E8F0,
-        spaceBorderColor = 0x2622D3EE,
-        rowAccentFill = solid(0xFF23324B),
-        rowAccentIndex = 0,
+        cornerRadius = 13f,
+        keyBorderColor = 0x12000000,
+        functionBorderColor = 0x1AFFFFFF,
+        spaceBorderColor = 0x12000000,
+        shadowColor = 0x88000000,
+        shadowBlur = 4f,
+        keyPressPreset = KeyPressAnimationPreset.SINK,
     )
 
     val crimsonVolt: Theme = makeTheme(
@@ -408,6 +410,85 @@ object DefaultThemes {
         spaceBorderColor = 0x4422D3EE,
         shadowColor = 0x88000000,
         shadowBlur = 8f,
+        themeMotionPreset = ThemeMotionPreset.PULSE,
+        motionDurationMs = 3600,
+        keyPressPreset = KeyPressAnimationPreset.GLOW,
+    )
+
+    val auroraDrive: Theme = makeTheme(
+        id = "aurora_drive",
+        name = "Aurora Drive",
+        backgroundFill = gradient(125f, 0xFF061726, 0xFF0B3B66, 0xFF0D9488, 0xFFA855F7),
+        defaultKeyFill = solid(0xFF123B5A),
+        functionKeyFill = solid(0xFF0F4C5C),
+        shiftFill = solid(0xFF34D399),
+        enterFill = solid(0xFF7C3AED),
+        spaceFill = solid(0xFF102A43),
+        labelColor = 0xFFF8FAFC,
+        trailColor = 0xFF6EE7F9,
+        toolbarFill = gradient(90f, 0xFF0A2239, 0xFF123B5A, 0xFF0F4C5C),
+        toolbarLabelColor = 0xFFE2E8F0,
+        shape = KeyShapeStyle.ROUNDED,
+        cornerRadius = 22f,
+        keyBorderColor = 0x3367E8F9,
+        functionBorderColor = 0x3344D0C2,
+        spaceBorderColor = 0x337C3AED,
+        shadowColor = 0x66000000,
+        shadowBlur = 6f,
+        themeMotionPreset = ThemeMotionPreset.AURORA,
+        motionDurationMs = 5200,
+        keyPressPreset = KeyPressAnimationPreset.POP,
+    )
+
+    val solarFlare: Theme = makeTheme(
+        id = "solar_flare",
+        name = "Solar Flare",
+        backgroundFill = gradient(120f, 0xFF3F0D12, 0xFFB91C1C, 0xFFF97316, 0xFFFDE68A),
+        defaultKeyFill = solid(0xFF7C2D12),
+        functionKeyFill = solid(0xFF9A3412),
+        shiftFill = solid(0xFFF59E0B),
+        enterFill = solid(0xFFFFEDD5),
+        spaceFill = solid(0xFF5B1C0E),
+        labelColor = 0xFFFFFBEB,
+        enterLabelColor = 0xFF7C2D12,
+        trailColor = 0xFFFDE68A,
+        toolbarFill = gradient(90f, 0xFF5B1C0E, 0xFF9A3412, 0xFFEA580C),
+        toolbarLabelColor = 0xFFFFEDD5,
+        shape = KeyShapeStyle.BUBBLE,
+        cornerRadius = 24f,
+        keyBorderColor = 0x33FDBA74,
+        functionBorderColor = 0x33FBBF24,
+        spaceBorderColor = 0x33FDE68A,
+        shadowColor = 0x77000000,
+        shadowBlur = 7f,
+        themeMotionPreset = ThemeMotionPreset.SHIMMER,
+        motionDurationMs = 3200,
+        keyPressPreset = KeyPressAnimationPreset.LIFT,
+    )
+
+    val spectrumRush: Theme = makeTheme(
+        id = "spectrum_rush",
+        name = "Spectrum Rush",
+        backgroundFill = gradient(130f, 0xFF111827, 0xFF2563EB, 0xFFEC4899, 0xFFF59E0B),
+        defaultKeyFill = solid(0xFF1D4ED8),
+        functionKeyFill = solid(0xFF7C3AED),
+        shiftFill = solid(0xFFEC4899),
+        enterFill = solid(0xFFF59E0B),
+        spaceFill = solid(0xFF1E293B),
+        labelColor = 0xFFF8FAFC,
+        trailColor = 0xFFFDE68A,
+        toolbarFill = gradient(90f, 0xFF1E293B, 0xFF2563EB, 0xFF7C3AED),
+        toolbarLabelColor = 0xFFF8FAFC,
+        shape = KeyShapeStyle.PILL,
+        cornerRadius = 26f,
+        keyBorderColor = 0x44FFFFFF,
+        functionBorderColor = 0x44F0ABFC,
+        spaceBorderColor = 0x33FDE68A,
+        shadowColor = 0x66000000,
+        shadowBlur = 8f,
+        themeMotionPreset = ThemeMotionPreset.SPECTRUM,
+        motionDurationMs = 4600,
+        keyPressPreset = KeyPressAnimationPreset.GLOW,
     )
 
     val defaults: List<Theme> = listOf(
@@ -428,6 +509,9 @@ object DefaultThemes {
         copperForge,
         skyPop,
         plumNeon,
+        auroraDrive,
+        solarFlare,
+        spectrumRush,
     )
 
     private fun makeTheme(
@@ -456,6 +540,9 @@ object DefaultThemes {
         translucency: Float = 0f,
         rowAccentFill: FillStyle? = null,
         rowAccentIndex: Int? = null,
+        themeMotionPreset: ThemeMotionPreset = ThemeMotionPreset.NONE,
+        motionDurationMs: Int = 6000,
+        keyPressPreset: KeyPressAnimationPreset? = null,
     ): Theme {
         val baseStyle = KeyStyle(
             fill = defaultKeyFill,
@@ -465,7 +552,7 @@ object DefaultThemes {
             shadow = ShadowSpec(color(shadowColor), blurRadiusDp = shadowBlur, offsetYDp = 2f),
             shape = shape,
             cornerRadiusDp = cornerRadius,
-            labelSizeSp = 20f,
+            labelSizeSp = 21f,
         )
 
         return Theme(
@@ -479,9 +566,9 @@ object DefaultThemes {
                 translucency = translucency,
             ),
             layoutMetrics = LayoutMetrics(
-                keyboardPaddingDp = 8f,
-                keyGapDp = 6f,
-                rowGapDp = 6f,
+                keyboardPaddingDp = 7f,
+                keyGapDp = 5f,
+                rowGapDp = 5f,
             ),
             defaultKeyStyle = baseStyle,
             functionalKeyStyle = baseStyle.copy(
@@ -514,12 +601,14 @@ object DefaultThemes {
                 thicknessDp = if (shape == KeyShapeStyle.GLASS) 6f else 5f,
             ),
             animationStyle = AnimationStyle(
-                keyPressPreset = if (shape == KeyShapeStyle.GLASS || shape == KeyShapeStyle.BUBBLE) {
+                keyPressPreset = keyPressPreset ?: if (shape == KeyShapeStyle.GLASS || shape == KeyShapeStyle.BUBBLE) {
                     KeyPressAnimationPreset.GLOW
                 } else {
                     KeyPressAnimationPreset.SCALE
                 },
                 keyboardTransitionPreset = KeyboardTransitionPreset.FADE_SLIDE,
+                themeMotionPreset = themeMotionPreset,
+                motionDurationMs = motionDurationMs,
             ),
             toolbarStyle = ToolbarStyle(
                 fill = toolbarFill,
