@@ -256,7 +256,7 @@ class KeyboardCanvasView @JvmOverloads constructor(
             return
         }
         val padding = context.dp((theme.layoutMetrics.keyboardPaddingDp - 1f).coerceAtLeast(3f))
-        val keyGap = context.dp((theme.layoutMetrics.keyGapDp - 1.5f).coerceAtLeast(3.2f))
+        val keyGap = context.dp((theme.layoutMetrics.keyGapDp - 2.1f).coerceAtLeast(2.7f))
         val rowGap = context.dp((theme.layoutMetrics.rowGapDp - 1f).coerceAtLeast(3.8f))
         val availableWidth = width - padding * 2f
         val totalRowWeight = layoutSpec.rows.sumOf { it.heightWeight.toDouble() }.toFloat().coerceAtLeast(1f)
@@ -310,11 +310,11 @@ class KeyboardCanvasView @JvmOverloads constructor(
         val rect = RectF(base)
         val isBottomRow = rowIndex == layoutSpec.rows.lastIndex
         val horizontalInset = when {
-            key.code == KeyCodes.SPACE -> 2.2f
-            key.code == KeyCodes.MODE_EMOJI -> 3.2f
-            key.code == KeyCodes.SHIFT || key.code == KeyCodes.BACKSPACE || key.code == KeyCodes.ENTER -> 2.8f
-            key.kind == KeyKind.CHARACTER -> 1.6f
-            else -> 2.8f
+            key.code == KeyCodes.SPACE -> 1.7f
+            key.code == KeyCodes.MODE_EMOJI -> 2.6f
+            key.code == KeyCodes.SHIFT || key.code == KeyCodes.BACKSPACE || key.code == KeyCodes.ENTER -> 2.2f
+            key.kind == KeyKind.CHARACTER -> 1.05f
+            else -> 2.2f
         }
         val verticalInset = when {
             isBottomRow -> 5.1f
