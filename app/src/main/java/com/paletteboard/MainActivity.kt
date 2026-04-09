@@ -13,13 +13,18 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.paletteboard.app.PaletteBoardApp
 import com.paletteboard.ime.PaletteInputMethodService
+import com.paletteboard.ui.main.MainUiEvent
 import com.paletteboard.ui.designsystem.PaletteBoardTheme
 import com.paletteboard.ui.main.MainViewModel
 import com.paletteboard.ui.main.MainViewModelFactory
 import com.paletteboard.ui.navigation.PaletteNavGraph
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels {
@@ -31,6 +36,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.events.collect { event ->
+                    when (event) {
+                        is MainUiEvent.LaunchIntent -> startActivity(event.intent)
+                    }
+                }
+            }
+        }
         setContent {
             PaletteBoardTheme {
                 val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
@@ -75,6 +89,8 @@ class MainActivity : ComponentActivity() {
                     onImportBufferChanged = viewModel::updateImportBuffer,
                     onImportTheme = viewModel::importThemeFromBuffer,
                     onExportActiveTheme = viewModel::exportTheme,
+                    onCheckForUpdates = { viewModel.checkForUpdates(manual = true) },
+                    onInstallUpdate = viewModel::installLatestUpdate,
                 )
             }
         }

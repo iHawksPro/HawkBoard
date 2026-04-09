@@ -1,5 +1,6 @@
 package com.paletteboard.ui.main
 
+import com.paletteboard.BuildConfig
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -17,9 +18,14 @@ import com.paletteboard.domain.model.ToolbarAction
 import com.paletteboard.engine.theme.DefaultThemes
 import com.paletteboard.engine.theme.ThemeManager
 import com.paletteboard.ui.state.MainUiState
+import com.paletteboard.updater.AppUpdateManager
+import com.paletteboard.updater.AppUpdateUiState
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -32,11 +38,16 @@ class MainViewModel(
     private val themeRepository: ThemeRepository,
     private val settingsRepository: SettingsRepository,
     private val themeManager: ThemeManager,
+    private val appUpdateManager: AppUpdateManager,
 ) : ViewModel() {
     private val draftTheme = MutableStateFlow(newThemeDraft(DefaultThemes.midnightPulse))
     private val importBuffer = MutableStateFlow("")
+    private val appUpdateState = MutableStateFlow(AppUpdateUiState(currentVersionLabel = BuildConfig.VERSION_NAME))
+    private val _events = MutableSharedFlow<MainUiEvent>(extraBufferCapacity = 1)
 
-    val uiState: StateFlow<MainUiState> = combine(
+    val events: SharedFlow<MainUiEvent> = _events.asSharedFlow()
+
+    private val baseUiState = combine(
         themeRepository.observeThemes(),
         themeManager.activeTheme,
         settingsRepository.settings,
@@ -51,6 +62,13 @@ class MainViewModel(
             importBuffer = buffer,
             isReady = true,
         )
+    }
+
+    val uiState: StateFlow<MainUiState> = combine(
+        baseUiState,
+        appUpdateState,
+    ) { baseState, updateState ->
+        baseState.copy(appUpdate = updateState)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -62,6 +80,7 @@ class MainViewModel(
             val activeTheme = themeManager.activeTheme.first()
             draftTheme.value = newThemeDraft(activeTheme)
         }
+        checkForUpdates(manual = false)
     }
 
     fun applyTheme(themeId: String) {
@@ -283,6 +302,111 @@ class MainViewModel(
         }
     }
 
+    fun checkForUpdates(manual: Boolean = true) {
+        viewModelScope.launch {
+            appUpdateState.update { current ->
+                current.copy(
+                    isChecking = true,
+                    errorMessage = null,
+                    statusMessage = if (manual) "Checking for updates..." else current.statusMessage,
+                )
+            }
+
+            val latestRelease = runCatching { appUpdateManager.fetchLatestRelease() }.getOrElse { throwable ->
+                appUpdateState.update { current ->
+                    current.copy(
+                        isChecking = false,
+                        errorMessage = if (manual) throwable.message ?: "Unable to check for updates right now." else null,
+                        statusMessage = if (manual) null else current.statusMessage,
+                    )
+                }
+                return@launch
+            }
+
+            val isUpdateAvailable = latestRelease?.let(appUpdateManager::isUpdateAvailable) == true
+            appUpdateState.update {
+                it.copy(
+                    latestRelease = latestRelease,
+                    updateAvailable = isUpdateAvailable,
+                    isChecking = false,
+                    errorMessage = null,
+                    statusMessage = when {
+                        latestRelease == null -> if (manual) "No release APK was found on GitHub yet." else null
+                        isUpdateAvailable -> "${latestRelease.versionLabel} is ready to install."
+                        manual -> "You're already on the latest build."
+                        else -> null
+                    },
+                )
+            }
+        }
+    }
+
+    fun installLatestUpdate() {
+        viewModelScope.launch {
+            val release = appUpdateState.value.latestRelease
+            if (release == null) {
+                checkForUpdates(manual = true)
+                return@launch
+            }
+
+            if (!appUpdateState.value.updateAvailable) {
+                appUpdateState.update {
+                    it.copy(
+                        statusMessage = "You're already on the newest build we can see.",
+                        errorMessage = null,
+                    )
+                }
+                return@launch
+            }
+
+            if (!appUpdateManager.canRequestPackageInstalls()) {
+                appUpdateState.update {
+                    it.copy(
+                        statusMessage = "Allow installs from Hawk Board once, then tap update again.",
+                        errorMessage = null,
+                    )
+                }
+                _events.emit(MainUiEvent.LaunchIntent(appUpdateManager.createInstallPermissionIntent()))
+                return@launch
+            }
+
+            appUpdateState.update {
+                it.copy(
+                    isDownloading = true,
+                    downloadProgress = 0f,
+                    errorMessage = null,
+                    statusMessage = "Downloading the latest APK...",
+                )
+            }
+
+            runCatching {
+                val apkFile = appUpdateManager.downloadUpdate(release) { progress ->
+                    appUpdateState.update { current ->
+                        current.copy(downloadProgress = progress)
+                    }
+                }
+                appUpdateState.update {
+                    it.copy(
+                        isDownloading = false,
+                        downloadProgress = 1f,
+                        errorMessage = null,
+                        statusMessage = "Android installer is ready. Confirm the update to finish.",
+                    )
+                }
+                _events.emit(MainUiEvent.LaunchIntent(appUpdateManager.createInstallIntent(apkFile)))
+            }.onFailure { throwable ->
+                appUpdateState.update {
+                    it.copy(
+                        isDownloading = false,
+                        downloadProgress = null,
+                        errorMessage = throwable.message ?: "Unable to download the update.",
+                        statusMessage = null,
+                    )
+                }
+            }
+        }
+    }
+
     private fun updateSettings(transform: (com.paletteboard.domain.model.UserSettings) -> com.paletteboard.domain.model.UserSettings) {
         viewModelScope.launch {
             settingsRepository.update(transform)
@@ -334,6 +458,7 @@ class MainViewModelFactory(
             themeRepository = container.themeRepository,
             settingsRepository = container.settingsRepository,
             themeManager = container.themeManager,
+            appUpdateManager = container.appUpdateManager,
         ) as T
     }
 }

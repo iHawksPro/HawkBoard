@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.FileUpload
+import androidx.compose.material.icons.rounded.SystemUpdateAlt
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Button
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -19,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.paletteboard.ui.state.MainUiState
+import kotlin.math.roundToInt
 
 @Composable
 fun DashboardScreen(
@@ -32,6 +35,8 @@ fun DashboardScreen(
     onOpenThemeLibrary: () -> Unit,
     onOpenThemeBuilder: () -> Unit,
     onOpenImportExport: () -> Unit,
+    onCheckForUpdates: () -> Unit,
+    onInstallUpdate: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -86,6 +91,96 @@ fun DashboardScreen(
                         Text("Show input picker")
                     }
                 }
+            }
+        }
+        item {
+            SectionCard(
+                title = "App Updates",
+                subtitle = "Hawk Board checks GitHub releases in-app and installs updates over your current app so your themes and settings stay in place.",
+            ) {
+                NavigationTile(
+                    title = "Current build",
+                    subtitle = "Version ${uiState.appUpdate.currentVersionLabel}",
+                    icon = Icons.Rounded.SystemUpdateAlt,
+                    onClick = onCheckForUpdates,
+                    actionLabel = "Check",
+                )
+                uiState.appUpdate.latestRelease?.let { release ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        TagChip(
+                            label = if (uiState.appUpdate.updateAvailable) {
+                                "Update ${release.versionLabel}"
+                            } else {
+                                "Latest ${release.versionLabel}"
+                            },
+                        )
+                        if (uiState.appUpdate.isDownloading) {
+                            TagChip(
+                                label = uiState.appUpdate.downloadProgress?.let { progress ->
+                                    "Downloading ${(progress * 100).roundToInt()}%"
+                                } ?: "Downloading",
+                            )
+                        }
+                    }
+                    if (uiState.appUpdate.isDownloading) {
+                        LinearProgressIndicator(
+                            progress = { uiState.appUpdate.downloadProgress ?: 0f },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    val notesPreview = release.releaseNotes
+                        .lineSequence()
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                        .take(3)
+                        .joinToString(" ")
+                        .ifBlank { "Release notes will appear here when the GitHub release includes them." }
+                    Text(
+                        text = notesPreview,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                uiState.appUpdate.statusMessage?.let { message ->
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                uiState.appUpdate.errorMessage?.let { message ->
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = onCheckForUpdates,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(if (uiState.appUpdate.isChecking) "Checking..." else "Check now")
+                    }
+                    Button(
+                        onClick = onInstallUpdate,
+                        enabled = uiState.appUpdate.updateAvailable && !uiState.appUpdate.isDownloading,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(if (uiState.appUpdate.isDownloading) "Downloading..." else "Install update")
+                    }
+                }
+                Text(
+                    text = "Android will still show one installer confirmation. That is the closest secure update flow a normal app can do outside the Play Store.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
         item {

@@ -10,6 +10,7 @@ import com.paletteboard.engine.suggestion.SuggestionEngine
 import com.paletteboard.engine.theme.ThemeManager
 import com.paletteboard.ime.controller.KeyboardController
 import com.paletteboard.ime.feedback.TypingFeedbackController
+import com.paletteboard.updater.AppUpdateManager
 import com.paletteboard.util.JsonConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +34,7 @@ class AppContainer(context: Context) {
     val suggestionEngine = SuggestionEngine(applicationContext)
     val themeManager = ThemeManager(themeRepository, settingsRepository)
     val typingFeedbackController = TypingFeedbackController(applicationContext)
+    val appUpdateManager = AppUpdateManager(applicationContext, json)
     val keyboardController = KeyboardController(
         emojiCatalog = emojiCatalog,
         suggestionEngine = suggestionEngine,
