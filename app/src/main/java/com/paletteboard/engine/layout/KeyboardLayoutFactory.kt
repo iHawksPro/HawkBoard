@@ -73,35 +73,35 @@ object KeyboardLayoutFactory {
             if (settings.showNumberRow) {
                 add(KeyRow("1234567890".map(::numberKey), heightWeight = 0.7f))
             }
-            add(KeyRow("qwertyuiop".map(::characterKey), heightWeight = 1.06f))
+            add(KeyRow("qwertyuiop".map(::characterKey), heightWeight = 1.08f))
             add(
                 KeyRow(
                     keys = "asdfghjkl".map(::characterKey),
-                    heightWeight = 1.06f,
-                    leadingInsetWeight = 0.46f,
-                    trailingInsetWeight = 0.46f,
+                    heightWeight = 1.08f,
+                    leadingInsetWeight = 0.54f,
+                    trailingInsetWeight = 0.54f,
                 ),
             )
             add(
                 KeyRow(
                     keys = listOf(shiftKey()) + "zxcvbnm".map(::characterKey) + listOf(backspaceKey()),
-                    heightWeight = 1.12f,
-                    leadingInsetWeight = 0.03f,
-                    trailingInsetWeight = 0.03f,
+                    heightWeight = 1.16f,
+                    leadingInsetWeight = 0.1f,
+                    trailingInsetWeight = 0.1f,
                 ),
             )
             add(
                 KeyRow(
                     keys = listOf(
-                        emojiSwitchKey(widthWeight = 0.9f),
-                        symbolsSwitchKey(label = "123", widthWeight = 1.24f),
+                        symbolsSwitchKey(label = "123", widthWeight = 1.12f),
+                        emojiSwitchKey(widthWeight = 0.96f),
                         spaceKey(localeTag),
-                        periodKey(widthWeight = 0.9f),
-                        enterKey(),
+                        periodKey(widthWeight = 0.84f),
+                        enterKey(widthWeight = 1.58f),
                     ),
-                    heightWeight = 0.98f,
-                    leadingInsetWeight = 0.02f,
-                    trailingInsetWeight = 0.02f,
+                    heightWeight = 1.04f,
+                    leadingInsetWeight = 0.08f,
+                    trailingInsetWeight = 0.08f,
                 ),
             )
         }
@@ -138,15 +138,15 @@ object KeyboardLayoutFactory {
                 ),
                 KeyRow(
                     keys = listOf(
-                        emojiSwitchKey(widthWeight = 0.9f),
-                        lettersSwitchKey(widthWeight = 1.24f),
+                        lettersSwitchKey(widthWeight = 1.12f),
+                        emojiSwitchKey(widthWeight = 0.96f),
                         spaceKey(localeTag),
-                        periodKey(widthWeight = 0.9f),
-                        enterKey(),
+                        periodKey(widthWeight = 0.84f),
+                        enterKey(widthWeight = 1.58f),
                     ),
-                    heightWeight = 0.98f,
-                    leadingInsetWeight = 0.02f,
-                    trailingInsetWeight = 0.02f,
+                    heightWeight = 1.04f,
+                    leadingInsetWeight = 0.08f,
+                    trailingInsetWeight = 0.08f,
                 ),
             ),
             supportsGlideTyping = false,
@@ -191,7 +191,7 @@ object KeyboardLayoutFactory {
         widthWeight = 1.04f,
     )
 
-    private fun shiftKey(widthWeight: Float = 1.44f): KeyboardKeySpec = KeyboardKeySpec(
+    private fun shiftKey(widthWeight: Float = 1.5f): KeyboardKeySpec = KeyboardKeySpec(
         id = "shift",
         label = "\u21E7",
         code = KeyCodes.SHIFT,
@@ -200,7 +200,7 @@ object KeyboardLayoutFactory {
         specialStyleTarget = SpecialKeyStyleTarget.SHIFT,
     )
 
-    private fun backspaceKey(widthWeight: Float = 1.44f): KeyboardKeySpec = KeyboardKeySpec(
+    private fun backspaceKey(widthWeight: Float = 1.5f): KeyboardKeySpec = KeyboardKeySpec(
         id = "backspace",
         label = "\u232B",
         code = KeyCodes.BACKSPACE,
@@ -235,7 +235,7 @@ object KeyboardLayoutFactory {
         commitText = " ",
         code = KeyCodes.SPACE,
         kind = KeyKind.FUNCTION,
-        widthWeight = 4.92f,
+        widthWeight = 4.86f,
         specialStyleTarget = SpecialKeyStyleTarget.SPACEBAR,
     )
 

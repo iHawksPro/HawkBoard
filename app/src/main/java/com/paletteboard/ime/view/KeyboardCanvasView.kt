@@ -3,9 +3,11 @@ package com.paletteboard.ime.view
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
+import android.graphics.Shader
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.HapticFeedbackConstants
@@ -20,11 +22,13 @@ import com.paletteboard.domain.model.KeyPressAnimationPreset
 import com.paletteboard.domain.model.KeyShapeStyle
 import com.paletteboard.domain.model.KeyboardKeySpec
 import com.paletteboard.domain.model.KeyboardLayout
+import com.paletteboard.domain.model.KeyboardMode
 import com.paletteboard.domain.model.Theme
 import com.paletteboard.domain.model.ThemeMotionPreset
 import com.paletteboard.engine.theme.DefaultThemes
 import com.paletteboard.engine.theme.ThemeManager
 import com.paletteboard.ime.controller.ShiftState
+import com.paletteboard.util.androidColors
 import com.paletteboard.util.blendArgb
 import com.paletteboard.util.primaryColor
 import com.paletteboard.util.toAndroidColor
@@ -53,6 +57,7 @@ class KeyboardCanvasView @JvmOverloads constructor(
     private val popupPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val popupBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val pressedPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     private var layoutSpec = KeyboardLayout(
         id = "empty",
@@ -146,15 +151,11 @@ class KeyboardCanvasView @JvmOverloads constructor(
             val preset = theme.animationStyle.keyPressPreset
             val renderedRect = if (pressed) animatedSurfaceRect(keyRect, preset, pressProgress) else keyRect
             val radius = keyCornerRadius(renderedRect, geometry.spec, style)
-            fillPaint.color = animatedKeyColor(
-                style.fill.primaryColor().toAndroidColor(),
-                theme.enterKeyStyle.fill.primaryColor().toAndroidColor(),
-                theme.animationStyle.themeMotionPreset,
-                index * 0.19f,
-                now,
-            )
+            drawShadowSurface(canvas, renderedRect, radius, style, pressed)
+            configureKeySurface(style, renderedRect, index, now)
             if (pressed && preset == KeyPressAnimationPreset.FLASH) {
                 fillPaint.color = blendArgb(fillPaint.color, 0xFFFFFFFF.toInt(), 0.2f + pressProgress * 0.18f)
+                fillPaint.shader = null
             }
             borderPaint.color = style.border.color.toAndroidColor()
             borderPaint.strokeWidth = context.dp(style.border.widthDp.coerceAtLeast(0.8f))
@@ -255,9 +256,9 @@ class KeyboardCanvasView @JvmOverloads constructor(
             averageCharacterKeyHeight = 0f
             return
         }
-        val padding = context.dp((theme.layoutMetrics.keyboardPaddingDp - 1f).coerceAtLeast(3f))
-        val keyGap = context.dp((theme.layoutMetrics.keyGapDp - 1.85f).coerceAtLeast(2.9f))
-        val rowGap = context.dp((theme.layoutMetrics.rowGapDp - 1f).coerceAtLeast(3.8f))
+        val padding = context.dp((theme.layoutMetrics.keyboardPaddingDp - 0.3f).coerceAtLeast(4f))
+        val keyGap = context.dp((theme.layoutMetrics.keyGapDp - 1.15f).coerceAtLeast(3.4f))
+        val rowGap = context.dp((theme.layoutMetrics.rowGapDp - 0.3f).coerceAtLeast(4.9f))
         val availableWidth = width - padding * 2f
         val totalRowWeight = layoutSpec.rows.sumOf { it.heightWeight.toDouble() }.toFloat().coerceAtLeast(1f)
         val availableHeight = height - padding * 2f - rowGap * (layoutSpec.rows.size - 1).coerceAtLeast(0)
@@ -294,8 +295,8 @@ class KeyboardCanvasView @JvmOverloads constructor(
         if (geometries.isEmpty()) return null
         val adjustedY = y - context.dp(4f)
         val candidates = geometries.filter { geometry ->
-            val expandX = if (geometry.spec.kind == KeyKind.CHARACTER) averageCharacterKeyWidth * 0.28f else context.dp(12f)
-            val expandY = if (geometry.spec.kind == KeyKind.CHARACTER) averageCharacterKeyHeight * 0.2f else context.dp(10f)
+            val expandX = if (geometry.spec.kind == KeyKind.CHARACTER) averageCharacterKeyWidth * 0.3f else context.dp(12f)
+            val expandY = if (geometry.spec.kind == KeyKind.CHARACTER) averageCharacterKeyHeight * 0.24f else context.dp(10f)
             x in (geometry.left - expandX)..(geometry.right + expandX) &&
                 adjustedY in (geometry.top - expandY)..(geometry.bottom + expandY)
         }
@@ -315,19 +316,76 @@ class KeyboardCanvasView @JvmOverloads constructor(
         val rect = RectF(base)
         val isBottomRow = rowIndex == layoutSpec.rows.lastIndex
         val horizontalInset = when {
-            key.code == KeyCodes.SPACE -> 1.85f
-            key.code == KeyCodes.MODE_EMOJI -> 2.75f
-            key.code == KeyCodes.SHIFT || key.code == KeyCodes.BACKSPACE || key.code == KeyCodes.ENTER -> 2.35f
-            key.kind == KeyKind.CHARACTER -> 1.2f
-            else -> 2.35f
+            key.code == KeyCodes.SPACE -> 1.05f
+            key.code == KeyCodes.MODE_EMOJI -> 1.45f
+            key.code == KeyCodes.SHIFT || key.code == KeyCodes.BACKSPACE || key.code == KeyCodes.ENTER -> 1.45f
+            key.kind == KeyKind.CHARACTER -> 0.65f
+            else -> 1.4f
         }
         val verticalInset = when {
-            isBottomRow -> 5.1f
-            key.kind == KeyKind.CHARACTER -> 2.9f
-            else -> 4.1f
+            isBottomRow -> 3.3f
+            key.kind == KeyKind.CHARACTER -> 1.5f
+            else -> 2.45f
         }
         rect.inset(context.dp(horizontalInset), context.dp(verticalInset))
         return rect
+    }
+
+    private fun configureKeySurface(
+        style: com.paletteboard.domain.model.KeyStyle,
+        rect: RectF,
+        index: Int,
+        now: Long,
+    ) {
+        val fillColors = style.fill.androidColors()
+        if (fillColors.size > 1) {
+            fillPaint.shader = LinearGradient(
+                rect.left,
+                rect.top,
+                rect.left,
+                rect.bottom,
+                fillColors.toIntArray(),
+                null,
+                Shader.TileMode.CLAMP,
+            )
+            return
+        }
+
+        fillPaint.shader = null
+        fillPaint.color = animatedKeyColor(
+            fillColors.first(),
+            theme.enterKeyStyle.fill.primaryColor().toAndroidColor(),
+            theme.animationStyle.themeMotionPreset,
+            index * 0.19f,
+            now,
+        )
+    }
+
+    private fun drawShadowSurface(
+        canvas: Canvas,
+        rect: RectF,
+        radius: Float,
+        style: com.paletteboard.domain.model.KeyStyle,
+        pressed: Boolean,
+    ) {
+        val shadowColor = style.shadow.color.toAndroidColor()
+        if (shadowColor == 0 || style.shadow.blurRadiusDp <= 0f) return
+
+        shadowPaint.shader = null
+        shadowPaint.color = shadowColor
+        shadowPaint.alpha = if (pressed) 34 else 74
+        val shadowRect = RectF(rect).apply {
+            offset(
+                context.dp(style.shadow.offsetXDp),
+                context.dp(style.shadow.offsetYDp.coerceAtLeast(1f)) * if (pressed) 0.35f else 1f,
+            )
+        }
+        canvas.drawRoundRect(
+            shadowRect,
+            radius + context.dp(0.8f),
+            radius + context.dp(0.8f),
+            shadowPaint,
+        )
     }
 
     private fun drawKeyContent(
@@ -371,6 +429,7 @@ class KeyboardCanvasView @JvmOverloads constructor(
         style: com.paletteboard.domain.model.KeyStyle,
     ) {
         val hint = key.hintLabel ?: return
+        if (layoutSpec.mode == KeyboardMode.LETTERS && key.kind == KeyKind.CHARACTER) return
         if (key.kind != KeyKind.CHARACTER && key.id != "space") return
         hintPaint.color = style.labelColor.toAndroidColor()
         hintPaint.alpha = if (key.id == "space") 140 else 176
@@ -584,8 +643,8 @@ class KeyboardCanvasView @JvmOverloads constructor(
             KeyShapeStyle.BUBBLE -> minOf(styleRadius + context.dp(4f), rect.height() * 0.34f)
             KeyShapeStyle.GLASS -> minOf(styleRadius + context.dp(2f), rect.height() * 0.28f)
             KeyShapeStyle.ROUNDED -> when (key.id) {
-                "space" -> minOf(styleRadius, rect.height() * 0.26f)
-                else -> minOf(styleRadius, rect.height() * 0.2f)
+                "space" -> minOf(styleRadius, rect.height() * 0.24f)
+                else -> minOf(styleRadius, rect.height() * 0.24f)
             }
         }
     }

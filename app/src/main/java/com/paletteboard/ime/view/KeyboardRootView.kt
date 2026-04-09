@@ -158,18 +158,18 @@ class KeyboardRootView @JvmOverloads constructor(
         toolbarView.layoutParams = (toolbarView.layoutParams as LayoutParams).apply {
             width = contentWidth
             gravity = contentGravity
-            topMargin = context.dp(2f).toInt()
-            bottomMargin = context.dp(2f).toInt()
+            topMargin = context.dp(1f).toInt()
+            bottomMargin = context.dp(3f).toInt()
         }
         emojiHeaderView.layoutParams = (emojiHeaderView.layoutParams as LayoutParams).apply {
             width = contentWidth
             gravity = contentGravity
-            bottomMargin = if (emojiUiState?.isVisible == true) context.dp(6f).toInt() else 0
+            bottomMargin = if (emojiUiState?.isVisible == true) context.dp(4f).toInt() else 0
         }
         suggestionStripView.layoutParams = (suggestionStripView.layoutParams as LayoutParams).apply {
             width = contentWidth
             gravity = contentGravity
-            bottomMargin = context.dp(6f).toInt()
+            bottomMargin = context.dp(4f).toInt()
         }
         keyboardStage.layoutParams = (keyboardStage.layoutParams as LayoutParams).apply {
             height = context.dp(BASE_KEYBOARD_HEIGHT_DP * keyboardHeightScale).toInt()
@@ -386,7 +386,7 @@ class KeyboardRootView @JvmOverloads constructor(
     }
 
     private companion object {
-        const val BASE_KEYBOARD_HEIGHT_DP = 286f
+        const val BASE_KEYBOARD_HEIGHT_DP = 300f
         const val DEFAULT_BOTTOM_LIFT_DP = 14f
     }
 }

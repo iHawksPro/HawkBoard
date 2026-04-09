@@ -3,6 +3,7 @@ package com.paletteboard.ime.view
 import android.content.Context
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.util.TypedValue
 import android.view.Gravity
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
@@ -11,6 +12,7 @@ import com.paletteboard.domain.model.OneHandedMode
 import com.paletteboard.domain.model.Theme
 import com.paletteboard.domain.model.ToolbarAction
 import com.paletteboard.domain.model.ToolbarItem
+import com.paletteboard.util.blendArgb
 import com.paletteboard.util.primaryColor
 import com.paletteboard.util.toAndroidColor
 
@@ -24,6 +26,8 @@ class KeyboardToolbarView(context: Context) : HorizontalScrollView(context) {
 
     init {
         isHorizontalScrollBarEnabled = false
+        overScrollMode = OVER_SCROLL_NEVER
+        chipContainer.setPadding(context.dp(2f).toInt(), 0, context.dp(2f).toInt(), 0)
         addView(
             chipContainer,
             LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT),
@@ -40,11 +44,21 @@ class KeyboardToolbarView(context: Context) : HorizontalScrollView(context) {
         oneHandedMode: OneHandedMode,
     ) {
         chipContainer.removeAllViews()
-        val baseChipColor = theme.functionalKeyStyle.fill.primaryColor().toAndroidColor()
+        if (items.none { it.enabled }) {
+            visibility = GONE
+            return
+        }
+        visibility = VISIBLE
+
+        val baseChipColor = blendArgb(
+            theme.toolbarStyle.fill.primaryColor().toAndroidColor(),
+            theme.functionalKeyStyle.fill.primaryColor().toAndroidColor(),
+            0.28f,
+        )
         val activeChipColor = theme.enterKeyStyle.fill.primaryColor().toAndroidColor()
         val labelColor = theme.toolbarStyle.labelColor.toAndroidColor()
         val activeLabelColor = theme.enterKeyStyle.labelColor.toAndroidColor()
-        val borderColor = theme.functionalKeyStyle.border.color.toAndroidColor()
+        val borderColor = blendArgb(theme.functionalKeyStyle.border.color.toAndroidColor(), labelColor, 0.28f)
 
         items.filter { it.enabled }.forEach { item ->
             val isActive = item.action == ToolbarAction.ONE_HANDED && oneHandedMode != OneHandedMode.OFF
@@ -52,17 +66,18 @@ class KeyboardToolbarView(context: Context) : HorizontalScrollView(context) {
                 TextView(context).apply {
                     text = item.action.toolbarLabel(oneHandedMode)
                     gravity = Gravity.CENTER
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f)
                     setPadding(
-                        context.dp(14f).toInt(),
-                        context.dp(9f).toInt(),
-                        context.dp(14f).toInt(),
-                        context.dp(9f).toInt(),
+                        context.dp(12f).toInt(),
+                        context.dp(7f).toInt(),
+                        context.dp(12f).toInt(),
+                        context.dp(7f).toInt(),
                     )
                     setTypeface(typeface, if (isActive) Typeface.BOLD else Typeface.NORMAL)
                     setTextColor(if (isActive) activeLabelColor else labelColor)
                     background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
-                        cornerRadius = context.dp(theme.toolbarStyle.chipCornerRadiusDp)
+                        cornerRadius = context.dp(theme.toolbarStyle.chipCornerRadiusDp * 0.86f)
                         setColor(if (isActive) activeChipColor else baseChipColor)
                         setStroke(context.dp(1f).toInt(), borderColor)
                     }
@@ -71,7 +86,7 @@ class KeyboardToolbarView(context: Context) : HorizontalScrollView(context) {
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                     ).apply {
-                        marginEnd = context.dp(8f).toInt()
+                        marginEnd = context.dp(6f).toInt()
                     }
                 },
             )
@@ -85,7 +100,7 @@ private fun ToolbarAction.toolbarLabel(oneHandedMode: OneHandedMode): String = w
     ToolbarAction.THEMES -> "Themes"
     ToolbarAction.SETTINGS -> "Settings"
     ToolbarAction.ONE_HANDED -> when (oneHandedMode) {
-        OneHandedMode.OFF -> "One-handed"
+        OneHandedMode.OFF -> "One hand"
         OneHandedMode.LEFT -> "Left mode"
         OneHandedMode.RIGHT -> "Right mode"
     }
