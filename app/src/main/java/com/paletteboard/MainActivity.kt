@@ -91,6 +91,7 @@ class MainActivity : ComponentActivity() {
                     onExportActiveTheme = viewModel::exportTheme,
                     onCheckForUpdates = { viewModel.checkForUpdates(manual = true) },
                     onInstallUpdate = viewModel::installLatestUpdate,
+                    onCheckForUpdatesAndInstall = viewModel::checkForUpdatesAndInstall,
                 )
             }
         }

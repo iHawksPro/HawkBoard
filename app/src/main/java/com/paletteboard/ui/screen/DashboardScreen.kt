@@ -37,6 +37,7 @@ fun DashboardScreen(
     onOpenImportExport: () -> Unit,
     onCheckForUpdates: () -> Unit,
     onInstallUpdate: () -> Unit,
+    onCheckForUpdatesAndInstall: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -169,11 +170,25 @@ fun DashboardScreen(
                         Text(if (uiState.appUpdate.isChecking) "Checking..." else "Check now")
                     }
                     Button(
-                        onClick = onInstallUpdate,
-                        enabled = uiState.appUpdate.updateAvailable && !uiState.appUpdate.isDownloading,
+                        onClick = onCheckForUpdatesAndInstall,
+                        enabled = !uiState.appUpdate.isDownloading && !uiState.appUpdate.isChecking,
                         modifier = Modifier.weight(1f),
                     ) {
-                        Text(if (uiState.appUpdate.isDownloading) "Downloading..." else "Install update")
+                        Text(
+                            when {
+                                uiState.appUpdate.isDownloading -> "Downloading..."
+                                uiState.appUpdate.updateAvailable -> "Update now"
+                                else -> "Check and update"
+                            },
+                        )
+                    }
+                }
+                if (uiState.appUpdate.updateAvailable && !uiState.appUpdate.isDownloading) {
+                    OutlinedButton(
+                        onClick = onInstallUpdate,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Install latest release")
                     }
                 }
                 Text(

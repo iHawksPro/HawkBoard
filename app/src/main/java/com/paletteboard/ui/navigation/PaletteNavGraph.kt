@@ -91,6 +91,7 @@ fun PaletteNavGraph(
     onExportActiveTheme: () -> Unit,
     onCheckForUpdates: () -> Unit,
     onInstallUpdate: () -> Unit,
+    onCheckForUpdatesAndInstall: () -> Unit,
 ) {
     val navController = rememberNavController()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
@@ -206,6 +207,7 @@ fun PaletteNavGraph(
                         onOpenImportExport = { navController.navigate(Destination.ImportExport.route) },
                         onCheckForUpdates = onCheckForUpdates,
                         onInstallUpdate = onInstallUpdate,
+                        onCheckForUpdatesAndInstall = onCheckForUpdatesAndInstall,
                     )
                 }
                 composable(Destination.Themes.route) {

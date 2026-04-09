@@ -302,7 +302,10 @@ class MainViewModel(
         }
     }
 
-    fun checkForUpdates(manual: Boolean = true) {
+    fun checkForUpdates(
+        manual: Boolean = true,
+        installIfAvailable: Boolean = false,
+    ) {
         viewModelScope.launch {
             appUpdateState.update { current ->
                 current.copy(
@@ -338,6 +341,18 @@ class MainViewModel(
                     },
                 )
             }
+
+            if (isUpdateAvailable && installIfAvailable) {
+                installLatestUpdate()
+            }
+        }
+    }
+
+    fun checkForUpdatesAndInstall() {
+        if (appUpdateState.value.updateAvailable) {
+            installLatestUpdate()
+        } else {
+            checkForUpdates(manual = true, installIfAvailable = true)
         }
     }
 
