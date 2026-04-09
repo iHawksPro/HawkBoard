@@ -78,29 +78,30 @@ object KeyboardLayoutFactory {
                 KeyRow(
                     keys = "asdfghjkl".map(::characterKey),
                     heightWeight = 1.06f,
-                    leadingInsetWeight = 0.5f,
-                    trailingInsetWeight = 0.5f,
+                    leadingInsetWeight = 0.46f,
+                    trailingInsetWeight = 0.46f,
                 ),
             )
             add(
                 KeyRow(
                     keys = listOf(shiftKey()) + "zxcvbnm".map(::characterKey) + listOf(backspaceKey()),
                     heightWeight = 1.12f,
-                    leadingInsetWeight = 0.08f,
-                    trailingInsetWeight = 0.08f,
+                    leadingInsetWeight = 0.03f,
+                    trailingInsetWeight = 0.03f,
                 ),
             )
             add(
                 KeyRow(
                     keys = listOf(
-                        emojiSwitchKey(),
-                        symbolsSwitchKey(label = "123", widthWeight = 1.38f),
+                        emojiSwitchKey(widthWeight = 0.9f),
+                        symbolsSwitchKey(label = "123", widthWeight = 1.24f),
                         spaceKey(localeTag),
+                        periodKey(widthWeight = 0.9f),
                         enterKey(),
                     ),
                     heightWeight = 0.98f,
-                    leadingInsetWeight = 0.08f,
-                    trailingInsetWeight = 0.08f,
+                    leadingInsetWeight = 0.02f,
+                    trailingInsetWeight = 0.02f,
                 ),
             )
         }
@@ -137,14 +138,15 @@ object KeyboardLayoutFactory {
                 ),
                 KeyRow(
                     keys = listOf(
-                        emojiSwitchKey(),
-                        lettersSwitchKey(widthWeight = 1.38f),
+                        emojiSwitchKey(widthWeight = 0.9f),
+                        lettersSwitchKey(widthWeight = 1.24f),
                         spaceKey(localeTag),
+                        periodKey(widthWeight = 0.9f),
                         enterKey(),
                     ),
                     heightWeight = 0.98f,
-                    leadingInsetWeight = 0.08f,
-                    trailingInsetWeight = 0.08f,
+                    leadingInsetWeight = 0.02f,
+                    trailingInsetWeight = 0.02f,
                 ),
             ),
             supportsGlideTyping = false,
@@ -189,16 +191,16 @@ object KeyboardLayoutFactory {
         widthWeight = 1.04f,
     )
 
-    private fun shiftKey(): KeyboardKeySpec = KeyboardKeySpec(
+    private fun shiftKey(widthWeight: Float = 1.44f): KeyboardKeySpec = KeyboardKeySpec(
         id = "shift",
         label = "\u21E7",
         code = KeyCodes.SHIFT,
         kind = KeyKind.FUNCTION,
-        widthWeight = 1.52f,
+        widthWeight = widthWeight,
         specialStyleTarget = SpecialKeyStyleTarget.SHIFT,
     )
 
-    private fun backspaceKey(widthWeight: Float = 1.52f): KeyboardKeySpec = KeyboardKeySpec(
+    private fun backspaceKey(widthWeight: Float = 1.44f): KeyboardKeySpec = KeyboardKeySpec(
         id = "backspace",
         label = "\u232B",
         code = KeyCodes.BACKSPACE,
@@ -217,13 +219,13 @@ object KeyboardLayoutFactory {
         popupChars = listOf(";", ":", "@"),
     )
 
-    private fun periodKey(): KeyboardKeySpec = KeyboardKeySpec(
+    private fun periodKey(widthWeight: Float = 0.96f): KeyboardKeySpec = KeyboardKeySpec(
         id = "period",
         label = ".",
         commitText = ".",
         code = '.'.code,
         kind = KeyKind.CHARACTER,
-        widthWeight = 0.96f,
+        widthWeight = widthWeight,
         popupChars = listOf("?", "!", ","),
     )
 
@@ -233,11 +235,11 @@ object KeyboardLayoutFactory {
         commitText = " ",
         code = KeyCodes.SPACE,
         kind = KeyKind.FUNCTION,
-        widthWeight = 5.62f,
+        widthWeight = 4.92f,
         specialStyleTarget = SpecialKeyStyleTarget.SPACEBAR,
     )
 
-    private fun enterKey(widthWeight: Float = 1.96f): KeyboardKeySpec = KeyboardKeySpec(
+    private fun enterKey(widthWeight: Float = 1.78f): KeyboardKeySpec = KeyboardKeySpec(
         id = "enter",
         label = "return",
         commitText = "\n",
@@ -272,12 +274,12 @@ object KeyboardLayoutFactory {
         specialStyleTarget = SpecialKeyStyleTarget.FUNCTION,
     )
 
-    private fun emojiSwitchKey(): KeyboardKeySpec = KeyboardKeySpec(
+    private fun emojiSwitchKey(widthWeight: Float = 0.96f): KeyboardKeySpec = KeyboardKeySpec(
         id = "mode_emoji",
         label = "\uD83D\uDE03",
         code = KeyCodes.MODE_EMOJI,
         kind = KeyKind.MODE_SWITCH,
-        widthWeight = 0.96f,
+        widthWeight = widthWeight,
         specialStyleTarget = SpecialKeyStyleTarget.FUNCTION,
     )
 

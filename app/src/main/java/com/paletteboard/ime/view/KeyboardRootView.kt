@@ -214,7 +214,7 @@ class KeyboardRootView @JvmOverloads constructor(
     private fun stageWidthForMode(oneHandedMode: OneHandedMode): Int {
         val referenceWidth = if (width > 0) width else resources.displayMetrics.widthPixels
         return when (oneHandedMode) {
-            OneHandedMode.OFF -> (referenceWidth - context.dp(6f) * 2f).toInt()
+            OneHandedMode.OFF -> (referenceWidth - context.dp(4f) * 2f).toInt()
             OneHandedMode.LEFT, OneHandedMode.RIGHT -> (referenceWidth * 0.84f).toInt()
         }
     }
