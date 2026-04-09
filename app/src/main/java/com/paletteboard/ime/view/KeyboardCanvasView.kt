@@ -256,9 +256,9 @@ class KeyboardCanvasView @JvmOverloads constructor(
             averageCharacterKeyHeight = 0f
             return
         }
-        val padding = context.dp((theme.layoutMetrics.keyboardPaddingDp - 0.3f).coerceAtLeast(4f))
-        val keyGap = context.dp((theme.layoutMetrics.keyGapDp - 1.15f).coerceAtLeast(3.4f))
-        val rowGap = context.dp((theme.layoutMetrics.rowGapDp - 0.3f).coerceAtLeast(4.9f))
+        val padding = context.dp((theme.layoutMetrics.keyboardPaddingDp - 1.2f).coerceAtLeast(3.2f))
+        val keyGap = context.dp((theme.layoutMetrics.keyGapDp - 1.05f).coerceAtLeast(3.4f))
+        val rowGap = context.dp((theme.layoutMetrics.rowGapDp - 0.9f).coerceAtLeast(4.2f))
         val availableWidth = width - padding * 2f
         val totalRowWeight = layoutSpec.rows.sumOf { it.heightWeight.toDouble() }.toFloat().coerceAtLeast(1f)
         val availableHeight = height - padding * 2f - rowGap * (layoutSpec.rows.size - 1).coerceAtLeast(0)
@@ -316,16 +316,16 @@ class KeyboardCanvasView @JvmOverloads constructor(
         val rect = RectF(base)
         val isBottomRow = rowIndex == layoutSpec.rows.lastIndex
         val horizontalInset = when {
-            key.code == KeyCodes.SPACE -> 1.05f
-            key.code == KeyCodes.MODE_EMOJI -> 1.45f
-            key.code == KeyCodes.SHIFT || key.code == KeyCodes.BACKSPACE || key.code == KeyCodes.ENTER -> 1.45f
-            key.kind == KeyKind.CHARACTER -> 0.65f
-            else -> 1.4f
+            key.code == KeyCodes.SPACE -> 0.9f
+            key.code == KeyCodes.MODE_EMOJI -> 1.15f
+            key.code == KeyCodes.SHIFT || key.code == KeyCodes.BACKSPACE || key.code == KeyCodes.ENTER -> 1.15f
+            key.kind == KeyKind.CHARACTER -> 0.55f
+            else -> 1.15f
         }
         val verticalInset = when {
-            isBottomRow -> 3.3f
-            key.kind == KeyKind.CHARACTER -> 1.5f
-            else -> 2.45f
+            isBottomRow -> 4.8f
+            key.kind == KeyKind.CHARACTER -> 5.8f
+            else -> 5.2f
         }
         rect.inset(context.dp(horizontalInset), context.dp(verticalInset))
         return rect
@@ -643,8 +643,8 @@ class KeyboardCanvasView @JvmOverloads constructor(
             KeyShapeStyle.BUBBLE -> minOf(styleRadius + context.dp(4f), rect.height() * 0.34f)
             KeyShapeStyle.GLASS -> minOf(styleRadius + context.dp(2f), rect.height() * 0.28f)
             KeyShapeStyle.ROUNDED -> when (key.id) {
-                "space" -> minOf(styleRadius, rect.height() * 0.24f)
-                else -> minOf(styleRadius, rect.height() * 0.24f)
+                "space" -> minOf(styleRadius, rect.height() * 0.18f)
+                else -> minOf(styleRadius, rect.height() * 0.19f)
             }
         }
     }

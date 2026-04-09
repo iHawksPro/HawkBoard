@@ -37,7 +37,7 @@ object DefaultThemes {
         toolbarFill = solid(0xFF141518),
         toolbarLabelColor = 0xFFCDCDD2,
         shape = KeyShapeStyle.ROUNDED,
-        cornerRadius = 19f,
+        cornerRadius = 16f,
         keyBorderColor = 0x20FFFFFF,
         functionBorderColor = 0x18FFFFFF,
         spaceBorderColor = 0x24FFFFFF,
@@ -566,9 +566,9 @@ object DefaultThemes {
                 translucency = translucency,
             ),
             layoutMetrics = LayoutMetrics(
-                keyboardPaddingDp = 6.2f,
-                keyGapDp = 4.6f,
-                rowGapDp = 5.7f,
+                keyboardPaddingDp = 5.8f,
+                keyGapDp = 4.5f,
+                rowGapDp = 5.2f,
             ),
             defaultKeyStyle = baseStyle,
             functionalKeyStyle = baseStyle.copy(

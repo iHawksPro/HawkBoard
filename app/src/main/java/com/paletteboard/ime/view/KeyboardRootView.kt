@@ -214,7 +214,7 @@ class KeyboardRootView @JvmOverloads constructor(
     private fun stageWidthForMode(oneHandedMode: OneHandedMode): Int {
         val referenceWidth = if (width > 0) width else resources.displayMetrics.widthPixels
         return when (oneHandedMode) {
-            OneHandedMode.OFF -> (referenceWidth - context.dp(4f) * 2f).toInt()
+            OneHandedMode.OFF -> (referenceWidth - context.dp(2f) * 2f).toInt()
             OneHandedMode.LEFT, OneHandedMode.RIGHT -> (referenceWidth * 0.84f).toInt()
         }
     }
@@ -386,7 +386,7 @@ class KeyboardRootView @JvmOverloads constructor(
     }
 
     private companion object {
-        const val BASE_KEYBOARD_HEIGHT_DP = 300f
+        const val BASE_KEYBOARD_HEIGHT_DP = 256f
         const val DEFAULT_BOTTOM_LIFT_DP = 14f
     }
 }

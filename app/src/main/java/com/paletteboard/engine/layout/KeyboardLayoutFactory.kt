@@ -78,16 +78,16 @@ object KeyboardLayoutFactory {
                 KeyRow(
                     keys = "asdfghjkl".map(::characterKey),
                     heightWeight = 1.08f,
-                    leadingInsetWeight = 0.54f,
-                    trailingInsetWeight = 0.54f,
+                    leadingInsetWeight = 0.5f,
+                    trailingInsetWeight = 0.5f,
                 ),
             )
             add(
                 KeyRow(
                     keys = listOf(shiftKey()) + "zxcvbnm".map(::characterKey) + listOf(backspaceKey()),
                     heightWeight = 1.16f,
-                    leadingInsetWeight = 0.1f,
-                    trailingInsetWeight = 0.1f,
+                    leadingInsetWeight = 0.04f,
+                    trailingInsetWeight = 0.04f,
                 ),
             )
             add(
@@ -191,7 +191,7 @@ object KeyboardLayoutFactory {
         widthWeight = 1.04f,
     )
 
-    private fun shiftKey(widthWeight: Float = 1.5f): KeyboardKeySpec = KeyboardKeySpec(
+    private fun shiftKey(widthWeight: Float = 1.46f): KeyboardKeySpec = KeyboardKeySpec(
         id = "shift",
         label = "\u21E7",
         code = KeyCodes.SHIFT,
@@ -200,7 +200,7 @@ object KeyboardLayoutFactory {
         specialStyleTarget = SpecialKeyStyleTarget.SHIFT,
     )
 
-    private fun backspaceKey(widthWeight: Float = 1.5f): KeyboardKeySpec = KeyboardKeySpec(
+    private fun backspaceKey(widthWeight: Float = 1.46f): KeyboardKeySpec = KeyboardKeySpec(
         id = "backspace",
         label = "\u232B",
         code = KeyCodes.BACKSPACE,
