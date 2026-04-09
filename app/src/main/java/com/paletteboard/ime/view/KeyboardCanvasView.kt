@@ -256,7 +256,7 @@ class KeyboardCanvasView @JvmOverloads constructor(
             return
         }
         val padding = context.dp((theme.layoutMetrics.keyboardPaddingDp - 1f).coerceAtLeast(3f))
-        val keyGap = context.dp((theme.layoutMetrics.keyGapDp - 2.1f).coerceAtLeast(2.7f))
+        val keyGap = context.dp((theme.layoutMetrics.keyGapDp - 1.85f).coerceAtLeast(2.9f))
         val rowGap = context.dp((theme.layoutMetrics.rowGapDp - 1f).coerceAtLeast(3.8f))
         val availableWidth = width - padding * 2f
         val totalRowWeight = layoutSpec.rows.sumOf { it.heightWeight.toDouble() }.toFloat().coerceAtLeast(1f)
@@ -271,7 +271,12 @@ class KeyboardCanvasView @JvmOverloads constructor(
         layoutSpec.rows.forEach { row ->
             val rowHeight = availableHeight * (row.heightWeight / totalRowWeight)
             val rowUnitWeight = row.leadingInsetWeight + row.trailingInsetWeight + row.keys.sumOf { it.widthWeight.toDouble() }.toFloat()
-            var rowLeft = padding + ((widestRowUnitWeight - rowUnitWeight) * baseUnitWidth / 2f) + row.leadingInsetWeight * baseUnitWidth
+            val rowContentWidth =
+                (rowUnitWeight * baseUnitWidth) +
+                (keyGap * (row.keys.size - 1).coerceAtLeast(0))
+            var rowLeft = padding +
+                ((availableWidth - rowContentWidth) / 2f) +
+                (row.leadingInsetWeight * baseUnitWidth)
             row.keys.forEach { key ->
                 val keyWidth = baseUnitWidth * key.widthWeight
                 mapped += KeyGeometry(key, rowLeft, currentTop, rowLeft + keyWidth, currentTop + rowHeight)
@@ -310,11 +315,11 @@ class KeyboardCanvasView @JvmOverloads constructor(
         val rect = RectF(base)
         val isBottomRow = rowIndex == layoutSpec.rows.lastIndex
         val horizontalInset = when {
-            key.code == KeyCodes.SPACE -> 1.7f
-            key.code == KeyCodes.MODE_EMOJI -> 2.6f
-            key.code == KeyCodes.SHIFT || key.code == KeyCodes.BACKSPACE || key.code == KeyCodes.ENTER -> 2.2f
-            key.kind == KeyKind.CHARACTER -> 1.05f
-            else -> 2.2f
+            key.code == KeyCodes.SPACE -> 1.85f
+            key.code == KeyCodes.MODE_EMOJI -> 2.75f
+            key.code == KeyCodes.SHIFT || key.code == KeyCodes.BACKSPACE || key.code == KeyCodes.ENTER -> 2.35f
+            key.kind == KeyKind.CHARACTER -> 1.2f
+            else -> 2.35f
         }
         val verticalInset = when {
             isBottomRow -> 5.1f
