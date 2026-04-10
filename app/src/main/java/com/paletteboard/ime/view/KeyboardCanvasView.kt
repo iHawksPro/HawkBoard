@@ -42,6 +42,7 @@ class KeyboardCanvasView @JvmOverloads constructor(
 ) : View(context, attrs) {
     interface InteractionListener {
         fun onKeyTapped(key: KeyboardKeySpec)
+        fun onCursorMoved(steps: Int)
         fun onInteractionFinished()
     }
 
@@ -78,6 +79,10 @@ class KeyboardCanvasView @JvmOverloads constructor(
     private var repeatingKeyId: String? = null
     private var longPressKeyId: String? = null
     private var popupOverrideText: String? = null
+    private var cursorControlActive = false
+    private var touchDownX = 0f
+    private var touchDownY = 0f
+    private var lastCursorStepX = 0f
     private var pressProgress = 0f
     private var pressAnimator: ValueAnimator? = null
     private var averageCharacterKeyWidth = 0f
@@ -205,6 +210,10 @@ class KeyboardCanvasView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 parent?.requestDisallowInterceptTouchEvent(true)
                 downKey = findTapKey(event.x, event.y)
+                touchDownX = event.x
+                touchDownY = event.y
+                lastCursorStepX = event.x
+                cursorControlActive = false
                 pressedKeyId = downKey?.spec?.id
                 handledOnDownKeyId = null
                 popupOverrideText = null
@@ -216,6 +225,9 @@ class KeyboardCanvasView @JvmOverloads constructor(
             }
 
             MotionEvent.ACTION_MOVE -> {
+                if (handleSpacebarCursorMove(event)) {
+                    return true
+                }
                 val hovered = findTapKey(event.x, event.y)
                 if (hovered?.spec?.id != pressedKeyId) {
                     pressedKeyId = hovered?.spec?.id
@@ -234,6 +246,10 @@ class KeyboardCanvasView @JvmOverloads constructor(
             }
 
             MotionEvent.ACTION_UP -> {
+                if (cursorControlActive) {
+                    finishInteraction()
+                    return true
+                }
                 val tapKey = findTapKey(event.x, event.y) ?: downKey
                 if (tapKey != null && tapKey.spec.id != handledOnDownKeyId) {
                     interactionListener?.onKeyTapped(tapKey.spec)
@@ -263,9 +279,9 @@ class KeyboardCanvasView @JvmOverloads constructor(
             averageCharacterKeyHeight = 0f
             return
         }
-        val padding = context.dp((theme.layoutMetrics.keyboardPaddingDp - 1.2f).coerceAtLeast(3.2f))
-        val keyGap = context.dp((theme.layoutMetrics.keyGapDp - 1.05f).coerceAtLeast(3.4f))
-        val rowGap = context.dp((theme.layoutMetrics.rowGapDp - 0.9f).coerceAtLeast(4.2f))
+        val padding = context.dp((theme.layoutMetrics.keyboardPaddingDp - 1.1f).coerceAtLeast(3f))
+        val keyGap = context.dp((theme.layoutMetrics.keyGapDp - 1.3f).coerceAtLeast(2.8f))
+        val rowGap = context.dp((theme.layoutMetrics.rowGapDp - 1.05f).coerceAtLeast(3.8f))
         val availableWidth = width - padding * 2f
         val totalRowWeight = layoutSpec.rows.sumOf { it.heightWeight.toDouble() }.toFloat().coerceAtLeast(1f)
         val availableHeight = height - padding * 2f - rowGap * (layoutSpec.rows.size - 1).coerceAtLeast(0)
@@ -300,10 +316,10 @@ class KeyboardCanvasView @JvmOverloads constructor(
 
     private fun findTapKey(x: Float, y: Float): KeyGeometry? {
         if (geometries.isEmpty()) return null
-        val adjustedY = y - context.dp(4f)
+        val adjustedY = y - context.dp(3f)
         val candidates = geometries.filter { geometry ->
-            val expandX = if (geometry.spec.kind == KeyKind.CHARACTER) averageCharacterKeyWidth * 0.3f else context.dp(12f)
-            val expandY = if (geometry.spec.kind == KeyKind.CHARACTER) averageCharacterKeyHeight * 0.24f else context.dp(10f)
+            val expandX = if (geometry.spec.kind == KeyKind.CHARACTER) averageCharacterKeyWidth * 0.34f else context.dp(13f)
+            val expandY = if (geometry.spec.kind == KeyKind.CHARACTER) averageCharacterKeyHeight * 0.26f else context.dp(10f)
             x in (geometry.left - expandX)..(geometry.right + expandX) &&
                 adjustedY in (geometry.top - expandY)..(geometry.bottom + expandY)
         }
@@ -323,16 +339,18 @@ class KeyboardCanvasView @JvmOverloads constructor(
         val rect = RectF(base)
         val isBottomRow = rowIndex == layoutSpec.rows.lastIndex
         val horizontalInset = when {
-            key.code == KeyCodes.SPACE -> 0.9f
-            key.code == KeyCodes.MODE_EMOJI -> 1.15f
-            key.code == KeyCodes.SHIFT || key.code == KeyCodes.BACKSPACE || key.code == KeyCodes.ENTER -> 1.15f
-            key.kind == KeyKind.CHARACTER -> 0.55f
-            else -> 1.15f
+            key.code == KeyCodes.SPACE -> 0.82f
+            key.code == KeyCodes.MODE_EMOJI -> 0.98f
+            key.kind == KeyKind.EMOJI -> 0.76f
+            key.code == KeyCodes.SHIFT || key.code == KeyCodes.BACKSPACE || key.code == KeyCodes.ENTER -> 0.96f
+            key.kind == KeyKind.CHARACTER -> 0.42f
+            else -> 0.98f
         }
         val verticalInset = when {
-            isBottomRow -> 4.8f
-            key.kind == KeyKind.CHARACTER -> 5.8f
-            else -> 5.2f
+            isBottomRow -> 4.2f
+            key.kind == KeyKind.EMOJI -> 3.6f
+            key.kind == KeyKind.CHARACTER -> 5.1f
+            else -> 4.8f
         }
         rect.inset(context.dp(horizontalInset), context.dp(verticalInset))
         return rect
@@ -556,10 +574,40 @@ class KeyboardCanvasView @JvmOverloads constructor(
         canvas.drawLine(rect.centerX() - rect.width() * 0.07f, rect.centerY() + rect.height() * 0.1f, rect.centerX() + rect.width() * 0.07f, rect.centerY() - rect.height() * 0.1f, iconPaint)
     }
 
+    private fun handleSpacebarCursorMove(event: MotionEvent): Boolean {
+        val activeKey = downKey ?: return false
+        if (activeKey.spec.code != KeyCodes.SPACE) return false
+
+        val horizontalDelta = event.x - touchDownX
+        val verticalDelta = event.y - touchDownY
+        val activationDistance = context.dp(SPACE_CURSOR_ACTIVATION_DP)
+        if (!cursorControlActive) {
+            if (kotlin.math.abs(horizontalDelta) < activationDistance) return false
+            if (kotlin.math.abs(horizontalDelta) <= kotlin.math.abs(verticalDelta) * 1.15f) return false
+            cursorControlActive = true
+            handledOnDownKeyId = activeKey.spec.id
+            cancelLongPress(resetHandled = false)
+            popupOverrideText = null
+            pressedKeyId = activeKey.spec.id
+            lastCursorStepX = event.x
+        }
+
+        val stepWidth = context.dp(SPACE_CURSOR_STEP_DP)
+        val deltaSinceLastStep = event.x - lastCursorStepX
+        val steps = (deltaSinceLastStep / stepWidth).toInt()
+        if (steps != 0) {
+            interactionListener?.onCursorMoved(steps)
+            lastCursorStepX += steps * stepWidth
+        }
+        invalidate()
+        return true
+    }
+
     private fun finishInteraction() {
         cancelRepeat()
         cancelLongPress()
         downKey = null
+        cursorControlActive = false
         interactionListener?.onInteractionFinished()
         animatePress(0f, clearOnEnd = true)
     }
@@ -581,8 +629,8 @@ class KeyboardCanvasView @JvmOverloads constructor(
             KeyPressAnimationPreset.SLIDE -> rect.apply { offset(0f, context.dp(3f) * progress) }
             KeyPressAnimationPreset.FLASH -> rect
             KeyPressAnimationPreset.SINK -> rect.apply {
-                inset(insetX * 0.55f, insetY * 0.55f)
-                offset(0f, context.dp(2.6f) * progress)
+                inset(insetX * 0.42f, insetY * 0.42f)
+                offset(0f, context.dp(1.9f) * progress)
             }
             KeyPressAnimationPreset.BLOOM -> rect.apply { inset(-insetX * 0.8f, -insetY * 0.62f) }
         }
@@ -613,7 +661,7 @@ class KeyboardCanvasView @JvmOverloads constructor(
     private fun animatePress(target: Float, clearOnEnd: Boolean = false) {
         pressAnimator?.cancel()
         pressAnimator = ValueAnimator.ofFloat(pressProgress, target).apply {
-            duration = 68L
+            duration = 54L
             addUpdateListener {
                 pressProgress = it.animatedValue as Float
                 invalidate()
@@ -657,6 +705,7 @@ class KeyboardCanvasView @JvmOverloads constructor(
     }
 
     private fun labelSizeFor(key: KeyboardKeySpec, base: Float): Float = when {
+        key.kind == KeyKind.EMOJI -> base + 4.5f
         key.id == "space" -> base - 3.6f
         key.code == KeyCodes.ENTER && key.label.length > 2 -> base - 5.4f
         key.code == KeyCodes.MODE_EMOJI -> base - 0.8f
@@ -756,5 +805,7 @@ class KeyboardCanvasView @JvmOverloads constructor(
         const val BACKSPACE_REPEAT_INITIAL_DELAY_MS = 325L
         const val BACKSPACE_REPEAT_INTERVAL_MS = 65L
         const val LONG_PRESS_DELAY_MS = 360L
+        const val SPACE_CURSOR_ACTIVATION_DP = 10f
+        const val SPACE_CURSOR_STEP_DP = 16f
     }
 }

@@ -73,35 +73,36 @@ object KeyboardLayoutFactory {
             if (settings.showNumberRow) {
                 add(KeyRow("1234567890".map(::numberKey), heightWeight = 0.7f))
             }
-            add(KeyRow("qwertyuiop".map(::characterKey), heightWeight = 1.08f))
+            add(KeyRow("qwertyuiop".map(::characterKey), heightWeight = 1.1f))
             add(
                 KeyRow(
                     keys = "asdfghjkl".map(::characterKey),
-                    heightWeight = 1.08f,
-                    leadingInsetWeight = 0.5f,
-                    trailingInsetWeight = 0.5f,
+                    heightWeight = 1.1f,
+                    leadingInsetWeight = 0.46f,
+                    trailingInsetWeight = 0.46f,
                 ),
             )
             add(
                 KeyRow(
                     keys = listOf(shiftKey()) + "zxcvbnm".map(::characterKey) + listOf(backspaceKey()),
-                    heightWeight = 1.16f,
-                    leadingInsetWeight = 0.04f,
-                    trailingInsetWeight = 0.04f,
+                    heightWeight = 1.18f,
+                    leadingInsetWeight = 0.03f,
+                    trailingInsetWeight = 0.03f,
                 ),
             )
             add(
                 KeyRow(
                     keys = listOf(
-                        symbolsSwitchKey(label = "123", widthWeight = 1.12f),
-                        emojiSwitchKey(widthWeight = 0.96f),
+                        symbolsSwitchKey(label = "123", widthWeight = 1.04f),
+                        emojiSwitchKey(widthWeight = 0.9f),
+                        commaKey(),
                         spaceKey(localeTag),
-                        periodKey(widthWeight = 0.84f),
-                        enterKey(widthWeight = 1.58f),
+                        periodKey(widthWeight = 0.78f),
+                        enterKey(widthWeight = 1.42f),
                     ),
-                    heightWeight = 1.04f,
-                    leadingInsetWeight = 0.08f,
-                    trailingInsetWeight = 0.08f,
+                    heightWeight = 1.02f,
+                    leadingInsetWeight = 0.04f,
+                    trailingInsetWeight = 0.04f,
                 ),
             )
         }
@@ -138,15 +139,16 @@ object KeyboardLayoutFactory {
                 ),
                 KeyRow(
                     keys = listOf(
-                        lettersSwitchKey(widthWeight = 1.12f),
-                        emojiSwitchKey(widthWeight = 0.96f),
+                        lettersSwitchKey(widthWeight = 1.04f),
+                        emojiSwitchKey(widthWeight = 0.9f),
+                        commaKey(),
                         spaceKey(localeTag),
-                        periodKey(widthWeight = 0.84f),
-                        enterKey(widthWeight = 1.58f),
+                        periodKey(widthWeight = 0.78f),
+                        enterKey(widthWeight = 1.42f),
                     ),
-                    heightWeight = 1.04f,
-                    leadingInsetWeight = 0.08f,
-                    trailingInsetWeight = 0.08f,
+                    heightWeight = 1.02f,
+                    leadingInsetWeight = 0.04f,
+                    trailingInsetWeight = 0.04f,
                 ),
             ),
             supportsGlideTyping = false,
@@ -215,7 +217,7 @@ object KeyboardLayoutFactory {
         commitText = ",",
         code = ','.code,
         kind = KeyKind.CHARACTER,
-        widthWeight = 0.96f,
+        widthWeight = 0.78f,
         popupChars = listOf(";", ":", "@"),
     )
 
@@ -235,7 +237,7 @@ object KeyboardLayoutFactory {
         commitText = " ",
         code = KeyCodes.SPACE,
         kind = KeyKind.FUNCTION,
-        widthWeight = 4.86f,
+        widthWeight = 4.18f,
         specialStyleTarget = SpecialKeyStyleTarget.SPACEBAR,
     )
 

@@ -1,9 +1,11 @@
 package com.paletteboard.ime.controller
 
+import android.os.SystemClock
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import com.paletteboard.domain.model.KeyCodes
+import com.paletteboard.domain.model.KeyKind
 import com.paletteboard.domain.model.KeyboardKeySpec
 import com.paletteboard.domain.model.KeyboardLayout
 import com.paletteboard.domain.model.KeyboardMode
@@ -20,22 +22,25 @@ class KeyboardController(
     private var keyboardMode: KeyboardMode = KeyboardMode.LETTERS
     private var shiftState: ShiftState = ShiftState.OFF
     private var autoCapitalizationArmed: Boolean = true
+    private var lastShiftTapAtMs: Long = 0L
     private var emojiSearchQuery: String = ""
     private var emojiSearchActive: Boolean = false
     private var emojiSearchUsesSymbols: Boolean = false
     private var emojiSelectedGroup: String = emojiCatalog.groups().firstOrNull().orEmpty()
     private var emojiPageIndex: Int = 0
+    private val recentEmojis = mutableListOf<String>()
 
     fun onStartInput(editorInfo: EditorInfo?, settings: UserSettings): KeyboardRenderState {
         keyboardMode = if (isNumericField(editorInfo)) KeyboardMode.SYMBOLS else KeyboardMode.LETTERS
         shiftState = ShiftState.OFF
         autoCapitalizationArmed = !isNumericField(editorInfo) && settings.autoCapitalization
+        lastShiftTapAtMs = 0L
         emojiSearchQuery = ""
         emojiSearchActive = false
         emojiSearchUsesSymbols = false
         emojiPageIndex = 0
-        emojiSelectedGroup = emojiCatalog.groups().firstOrNull().orEmpty()
-        return buildRenderState(settings, inputConnection = null)
+        emojiSelectedGroup = if (recentEmojis.isNotEmpty()) RECENT_GROUP else emojiCatalog.groups().firstOrNull().orEmpty()
+        return buildRenderState(settings, inputConnection = null, editorInfo = editorInfo)
     }
 
     fun synchronizeTextContext(
@@ -55,6 +60,7 @@ class KeyboardController(
     fun buildRenderState(
         settings: UserSettings,
         inputConnection: InputConnection?,
+        editorInfo: EditorInfo? = null,
     ): KeyboardRenderState {
         val emojiUiState = if (keyboardMode == KeyboardMode.EMOJI) buildEmojiUiState() else null
         val layout = when {
@@ -71,16 +77,19 @@ class KeyboardController(
                 )
 
             else -> KeyboardLayoutFactory.createLayout(keyboardMode, settings)
-        }
+        }.withEnterKeyLabel(resolveEnterLabel(editorInfo))
+
+        val token = currentToken(inputConnection)
         val suggestions = when {
             keyboardMode == KeyboardMode.EMOJI && emojiSearchActive ->
                 emojiUiState?.searchEntries ?: emptyList()
 
-            settings.suggestionsEnabled ->
-                suggestionEngine.predict(currentToken(inputConnection), layout.localeTag)
+            settings.suggestionsEnabled && token.isNotBlank() ->
+                suggestionEngine.predict(token, layout.localeTag)
 
             else -> emptyList()
         }
+
         return KeyboardRenderState(
             layout = layout,
             suggestions = suggestions,
@@ -100,49 +109,63 @@ class KeyboardController(
             if (key.commitText?.length == 1 && shiftState == ShiftState.ON) {
                 shiftState = ShiftState.OFF
             }
-            return buildRenderState(settings, inputConnection)
+            return buildRenderState(settings, inputConnection, editorInfo)
         }
 
         when (key.code) {
-            KeyCodes.SHIFT -> {
-                shiftState = when (shiftState) {
-                    ShiftState.OFF -> ShiftState.ON
-                    ShiftState.ON -> ShiftState.LOCKED
-                    ShiftState.LOCKED -> ShiftState.OFF
-                }
-            }
-
+            KeyCodes.SHIFT -> handleShiftTap()
             KeyCodes.BACKSPACE -> {
                 inputConnection?.deleteSurroundingText(1, 0)
                 synchronizeTextContext(editorInfo, inputConnection, settings)
+                lastShiftTapAtMs = 0L
             }
 
-            KeyCodes.SPACE -> commitSpace(inputConnection, settings)
+            KeyCodes.SPACE -> {
+                commitSpace(inputConnection, settings)
+                lastShiftTapAtMs = 0L
+            }
+
             KeyCodes.ENTER -> {
                 commitEnter(inputConnection, editorInfo)
                 autoCapitalizationArmed = settings.autoCapitalization
+                lastShiftTapAtMs = 0L
             }
-            KeyCodes.MODE_SYMBOLS -> keyboardMode = KeyboardMode.SYMBOLS
-            KeyCodes.MODE_LETTERS -> keyboardMode = KeyboardMode.LETTERS
+
+            KeyCodes.MODE_SYMBOLS -> {
+                keyboardMode = KeyboardMode.SYMBOLS
+                lastShiftTapAtMs = 0L
+            }
+
+            KeyCodes.MODE_LETTERS -> {
+                keyboardMode = KeyboardMode.LETTERS
+                lastShiftTapAtMs = 0L
+            }
+
             KeyCodes.MODE_EMOJI -> {
                 keyboardMode = KeyboardMode.EMOJI
                 emojiSearchActive = false
                 emojiSearchQuery = ""
                 emojiSearchUsesSymbols = false
                 emojiPageIndex = 0
-            }
-            KeyCodes.CLIPBOARD -> {
-                // Clipboard surface is still handled from the toolbar/app shell.
+                lastShiftTapAtMs = 0L
             }
 
-            else -> commitKeyText(key, inputConnection, editorInfo, settings)
+            KeyCodes.CLIPBOARD -> Unit
+
+            else -> {
+                commitKeyText(key, inputConnection, editorInfo, settings)
+                if (key.kind == KeyKind.EMOJI) {
+                    rememberRecentEmoji(key.commitText.orEmpty())
+                }
+                lastShiftTapAtMs = 0L
+            }
         }
 
         if (key.commitText?.length == 1 && shiftState == ShiftState.ON) {
             shiftState = ShiftState.OFF
         }
 
-        return buildRenderState(settings, inputConnection)
+        return buildRenderState(settings, inputConnection, editorInfo)
     }
 
     fun handleSuggestionSelection(
@@ -153,16 +176,18 @@ class KeyboardController(
     ): KeyboardRenderState {
         if (keyboardMode == KeyboardMode.EMOJI) {
             inputConnection?.commitText(suggestion, 1)
+            rememberRecentEmoji(suggestion)
             autoCapitalizationArmed = false
-            return buildRenderState(settings, inputConnection)
+            return buildRenderState(settings, inputConnection, editorInfo)
         }
+
         val committed = applyCapitalization(suggestion, editorInfo, inputConnection, settings)
         replaceCurrentTokenWith(committed, inputConnection, appendSpace = true)
         if (shiftState == ShiftState.ON) {
             shiftState = ShiftState.OFF
         }
         autoCapitalizationArmed = false
-        return buildRenderState(settings, inputConnection)
+        return buildRenderState(settings, inputConnection, editorInfo)
     }
 
     fun activateEmojiSearch(settings: UserSettings): KeyboardRenderState {
@@ -224,7 +249,8 @@ class KeyboardController(
                 emojiPageIndex = 0
                 shiftState = ShiftState.OFF
             }
-            ToolbarAction.ONE_HANDED -> Unit
+
+            ToolbarAction.ONE_HANDED,
             ToolbarAction.CLIPBOARD,
             ToolbarAction.THEMES,
             ToolbarAction.SETTINGS,
@@ -347,13 +373,7 @@ class KeyboardController(
         settings: UserSettings,
     ) {
         when (key.code) {
-            KeyCodes.SHIFT -> {
-                shiftState = when (shiftState) {
-                    ShiftState.OFF -> ShiftState.ON
-                    ShiftState.ON -> ShiftState.LOCKED
-                    ShiftState.LOCKED -> ShiftState.OFF
-                }
-            }
+            KeyCodes.SHIFT -> handleShiftTap()
 
             KeyCodes.BACKSPACE -> {
                 if (emojiSearchQuery.isNotEmpty()) {
@@ -362,20 +382,32 @@ class KeyboardController(
                     emojiSearchActive = false
                     emojiSearchUsesSymbols = false
                 }
+                lastShiftTapAtMs = 0L
             }
 
             KeyCodes.SPACE -> {
                 if (emojiSearchQuery.isNotBlank() && !emojiSearchQuery.endsWith(' ')) {
                     emojiSearchQuery += " "
                 }
+                lastShiftTapAtMs = 0L
             }
 
-            KeyCodes.MODE_SYMBOLS -> emojiSearchUsesSymbols = true
-            KeyCodes.MODE_LETTERS -> emojiSearchUsesSymbols = false
+            KeyCodes.MODE_SYMBOLS -> {
+                emojiSearchUsesSymbols = true
+                lastShiftTapAtMs = 0L
+            }
+
+            KeyCodes.MODE_LETTERS -> {
+                emojiSearchUsesSymbols = false
+                lastShiftTapAtMs = 0L
+            }
+
             KeyCodes.ENTER -> Unit
+
             else -> {
                 val text = key.commitText ?: return
                 emojiSearchQuery += text.lowercase()
+                lastShiftTapAtMs = 0L
             }
         }
         if (!settings.autoCapitalization) {
@@ -384,16 +416,26 @@ class KeyboardController(
     }
 
     private fun buildEmojiUiState(): EmojiUiState {
-        val groups = emojiCatalog.groups()
+        val catalogGroups = emojiCatalog.groups()
+        val groups = if (recentEmojis.isEmpty()) catalogGroups else listOf(RECENT_GROUP) + catalogGroups
         if (emojiSelectedGroup.isBlank()) {
             emojiSelectedGroup = groups.firstOrNull().orEmpty()
         }
-        val page = emojiCatalog.pageForGroup(
-            group = emojiSelectedGroup,
-            pageIndex = emojiPageIndex,
-            pageSize = EMOJI_PAGE_SIZE,
-        )
+        if (emojiSelectedGroup == RECENT_GROUP && recentEmojis.isEmpty()) {
+            emojiSelectedGroup = catalogGroups.firstOrNull().orEmpty()
+        }
+
+        val page = if (emojiSelectedGroup == RECENT_GROUP) {
+            buildRecentEmojiPage(emojiPageIndex)
+        } else {
+            emojiCatalog.pageForGroup(
+                group = emojiSelectedGroup,
+                pageIndex = emojiPageIndex,
+                pageSize = EMOJI_PAGE_SIZE,
+            )
+        }
         emojiPageIndex = page.pageIndex
+
         return EmojiUiState(
             isVisible = keyboardMode == KeyboardMode.EMOJI,
             searchActive = emojiSearchActive,
@@ -407,6 +449,44 @@ class KeyboardController(
             pageEntries = page.entries.map { it.emoji },
             searchEntries = emojiCatalog.search(emojiSearchQuery, EMOJI_SEARCH_LIMIT).map { it.emoji },
         )
+    }
+
+    private fun buildRecentEmojiPage(pageIndex: Int): EmojiCatalog.EmojiPage {
+        val recentEntries = recentEmojis
+            .take(EMOJI_RECENT_LIMIT)
+            .map { emoji -> EmojiCatalog.EmojiEntry(emoji = emoji, name = emoji, group = RECENT_GROUP) }
+
+        val totalPages = ((recentEntries.size + EMOJI_PAGE_SIZE - 1) / EMOJI_PAGE_SIZE).coerceAtLeast(1)
+        val safePageIndex = pageIndex.coerceIn(0, totalPages - 1)
+        val start = safePageIndex * EMOJI_PAGE_SIZE
+        val end = (start + EMOJI_PAGE_SIZE).coerceAtMost(recentEntries.size)
+
+        return EmojiCatalog.EmojiPage(
+            entries = if (recentEntries.isEmpty()) emptyList() else recentEntries.subList(start, end),
+            pageIndex = safePageIndex,
+            totalPages = totalPages,
+            canGoPrevious = safePageIndex > 0,
+            canGoNext = safePageIndex < totalPages - 1,
+        )
+    }
+
+    private fun rememberRecentEmoji(emoji: String) {
+        if (emoji.isBlank()) return
+        recentEmojis.remove(emoji)
+        recentEmojis.add(0, emoji)
+        if (recentEmojis.size > EMOJI_RECENT_LIMIT) {
+            recentEmojis.removeAt(recentEmojis.lastIndex)
+        }
+    }
+
+    private fun handleShiftTap() {
+        val now = SystemClock.uptimeMillis()
+        shiftState = when (shiftState) {
+            ShiftState.OFF -> ShiftState.ON
+            ShiftState.ON -> if (now - lastShiftTapAtMs <= SHIFT_DOUBLE_TAP_WINDOW_MS) ShiftState.LOCKED else ShiftState.OFF
+            ShiftState.LOCKED -> ShiftState.OFF
+        }
+        lastShiftTapAtMs = now
     }
 
     private fun shouldArmAfterCommittedText(
@@ -446,6 +526,9 @@ class KeyboardController(
         val SENTENCE_CLOSERS = setOf('"', '\'', ')', ']', '}', '»', '”', '’')
         const val EMOJI_PAGE_SIZE = 24
         const val EMOJI_SEARCH_LIMIT = 12
+        const val EMOJI_RECENT_LIMIT = 48
+        const val SHIFT_DOUBLE_TAP_WINDOW_MS = 380L
+        const val RECENT_GROUP = "Recent"
     }
 }
 
@@ -485,4 +568,27 @@ enum class KeyboardSideEffect {
     OPEN_SETTINGS,
     OPEN_THEME_LIBRARY,
     OPEN_CLIPBOARD,
+}
+
+private fun KeyboardLayout.withEnterKeyLabel(label: String): KeyboardLayout {
+    return copy(
+        rows = rows.map { row ->
+            row.copy(
+                keys = row.keys.map { key ->
+                    if (key.code == KeyCodes.ENTER) key.copy(label = label) else key
+                },
+            )
+        },
+    )
+}
+
+private fun resolveEnterLabel(editorInfo: EditorInfo?): String {
+    return when (editorInfo?.imeOptions?.and(EditorInfo.IME_MASK_ACTION)) {
+        EditorInfo.IME_ACTION_GO -> "go"
+        EditorInfo.IME_ACTION_SEARCH -> "search"
+        EditorInfo.IME_ACTION_SEND -> "send"
+        EditorInfo.IME_ACTION_NEXT -> "next"
+        EditorInfo.IME_ACTION_DONE -> "done"
+        else -> "return"
+    }
 }

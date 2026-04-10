@@ -4,6 +4,7 @@ import android.content.Intent
 import android.inputmethodservice.InputMethodService
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputMethodManager
 import com.paletteboard.domain.model.KeyCodes
 import com.paletteboard.MainActivity
@@ -103,6 +104,25 @@ class PaletteInputMethodService : InputMethodService(), KeyboardRootView.Callbac
         render()
     }
 
+    override fun onCursorMoved(steps: Int) {
+        val inputConnection = currentInputConnection ?: return
+        val extracted = inputConnection.getExtractedText(ExtractedTextRequest(), 0)
+        if (extracted != null) {
+            val textLength = extracted.text?.length ?: 0
+            val currentSelection = extracted.selectionEnd.coerceAtLeast(0)
+            val nextSelection = (currentSelection + steps).coerceIn(0, textLength)
+            if (nextSelection != currentSelection) {
+                inputConnection.setSelection(nextSelection, nextSelection)
+            }
+            return
+        }
+
+        val before = inputConnection.getTextBeforeCursor(128, 0)?.length ?: 0
+        val after = inputConnection.getTextAfterCursor(128, 0)?.length ?: 0
+        val nextSelection = (before + steps).coerceIn(0, before + after)
+        inputConnection.setSelection(nextSelection, nextSelection)
+    }
+
     override fun onToolbarAction(action: ToolbarAction) {
         if (action == ToolbarAction.ONE_HANDED) {
             serviceScope.launch {
@@ -170,6 +190,7 @@ class PaletteInputMethodService : InputMethodService(), KeyboardRootView.Callbac
         val renderState = appContainer.keyboardController.buildRenderState(
             settings = currentSettings,
             inputConnection = currentInputConnection,
+            editorInfo = currentEditor,
         )
         rootView.render(
             layout = renderState.layout,

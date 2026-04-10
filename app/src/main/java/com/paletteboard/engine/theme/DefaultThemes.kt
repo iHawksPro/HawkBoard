@@ -24,12 +24,12 @@ object DefaultThemes {
     val midnightPulse: Theme = makeTheme(
         id = DEFAULT_THEME_ID,
         name = "Hawk Graphite",
-        backgroundFill = gradient(180f, 0xFF09090B, 0xFF101113, 0xFF17181B),
-        defaultKeyFill = gradient(180f, 0xFF5F6065, 0xFF4C4D52),
-        functionKeyFill = gradient(180f, 0xFF3E4045, 0xFF313237),
-        shiftFill = gradient(180f, 0xFF45474C, 0xFF36383D),
-        enterFill = gradient(180f, 0xFF45474C, 0xFF36383D),
-        spaceFill = gradient(180f, 0xFF5C5D63, 0xFF4A4C51),
+        backgroundFill = gradient(180f, 0xFF09090B, 0xFF101113, 0xFF15171A),
+        defaultKeyFill = gradient(180f, 0xFF5D5E63, 0xFF4B4D51),
+        functionKeyFill = gradient(180f, 0xFF44464B, 0xFF35373B),
+        shiftFill = gradient(180f, 0xFF45474C, 0xFF383A3F),
+        enterFill = gradient(180f, 0xFF46484D, 0xFF383A3F),
+        spaceFill = gradient(180f, 0xFF616268, 0xFF4E5054),
         labelColor = 0xFFF5F5F7,
         shiftLabelColor = 0xFFFFFFFF,
         enterLabelColor = 0xFFF5F5F7,
@@ -37,13 +37,13 @@ object DefaultThemes {
         toolbarFill = solid(0xFF141518),
         toolbarLabelColor = 0xFFCDCDD2,
         shape = KeyShapeStyle.ROUNDED,
-        cornerRadius = 16f,
+        cornerRadius = 14f,
         keyBorderColor = 0x20FFFFFF,
         functionBorderColor = 0x18FFFFFF,
         spaceBorderColor = 0x24FFFFFF,
         shadowColor = 0x94000000,
-        shadowBlur = 3.5f,
-        keyPressPreset = KeyPressAnimationPreset.SINK,
+        shadowBlur = 2.5f,
+        keyPressPreset = KeyPressAnimationPreset.SCALE,
     )
 
     val crimsonVolt: Theme = makeTheme(
@@ -552,7 +552,7 @@ object DefaultThemes {
             shadow = ShadowSpec(color(shadowColor), blurRadiusDp = shadowBlur, offsetYDp = 2f),
             shape = shape,
             cornerRadiusDp = cornerRadius,
-            labelSizeSp = 22f,
+            labelSizeSp = 21f,
         )
 
         return Theme(
@@ -566,9 +566,9 @@ object DefaultThemes {
                 translucency = translucency,
             ),
             layoutMetrics = LayoutMetrics(
-                keyboardPaddingDp = 5.8f,
-                keyGapDp = 4.5f,
-                rowGapDp = 5.2f,
+                keyboardPaddingDp = 5.2f,
+                keyGapDp = 4.1f,
+                rowGapDp = 4.7f,
             ),
             defaultKeyStyle = baseStyle,
             functionalKeyStyle = baseStyle.copy(

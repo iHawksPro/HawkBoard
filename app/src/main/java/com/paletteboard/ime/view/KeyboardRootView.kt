@@ -40,6 +40,7 @@ class KeyboardRootView @JvmOverloads constructor(
 ) : LinearLayout(context, attrs) {
     interface Callback {
         fun onKeyTapped(key: KeyboardKeySpec)
+        fun onCursorMoved(steps: Int)
         fun onSuggestionSelected(text: String)
         fun onToolbarAction(action: ToolbarAction)
         fun onEmojiSearchTapped()
@@ -120,6 +121,10 @@ class KeyboardRootView @JvmOverloads constructor(
                     callback?.onKeyTapped(key)
                 }
 
+                override fun onCursorMoved(steps: Int) {
+                    callback?.onCursorMoved(steps)
+                }
+
                 override fun onInteractionFinished() = Unit
             },
         )
@@ -149,22 +154,29 @@ class KeyboardRootView @JvmOverloads constructor(
         oneHandedMode: OneHandedMode,
     ) {
         currentTheme = theme
+        val showEmojiHeader = emojiUiState?.isVisible == true
+        val showSuggestions = suggestions.isNotEmpty()
+        val showToolbar = !showEmojiHeader && !showSuggestions && toolbarItems.any { it.enabled }
         if (toolbarItems != lastToolbarItems || theme != lastToolbarTheme || oneHandedMode != lastToolbarMode) {
             toolbarView.setItems(toolbarItems, theme, oneHandedMode)
             lastToolbarItems = toolbarItems.toList()
             lastToolbarTheme = theme
             lastToolbarMode = oneHandedMode
         }
+        toolbarView.visibility = if (showToolbar) VISIBLE else GONE
         if (emojiUiState != lastEmojiUiState || theme != lastEmojiTheme) {
             emojiHeaderView.render(emojiUiState, theme)
             lastEmojiUiState = emojiUiState
             lastEmojiTheme = theme
         }
-        if (suggestions != lastSuggestions || theme != lastSuggestionTheme) {
-            suggestionStripView.setSuggestions(suggestions, theme)
-            lastSuggestions = suggestions.toList()
+        emojiHeaderView.visibility = if (showEmojiHeader) VISIBLE else GONE
+        val renderedSuggestions = if (showSuggestions) suggestions else emptyList()
+        if (renderedSuggestions != lastSuggestions || theme != lastSuggestionTheme) {
+            suggestionStripView.setSuggestions(renderedSuggestions, theme)
+            lastSuggestions = renderedSuggestions.toList()
             lastSuggestionTheme = theme
         }
+        suggestionStripView.visibility = if (showSuggestions) VISIBLE else GONE
         keyboardCanvasView.render(
             layout = layout,
             keyboardTheme = theme,
@@ -185,19 +197,19 @@ class KeyboardRootView @JvmOverloads constructor(
             height = LayoutParams.WRAP_CONTENT,
             gravity = contentGravity,
             topMargin = context.dp(1f).toInt(),
-            bottomMargin = context.dp(3f).toInt(),
+            bottomMargin = if (showToolbar) context.dp(4f).toInt() else 0,
         ) or updateLinearLayoutParams(
             view = emojiHeaderView,
             width = contentWidth,
             height = LayoutParams.WRAP_CONTENT,
             gravity = contentGravity,
-            bottomMargin = if (emojiUiState?.isVisible == true) context.dp(4f).toInt() else 0,
+            bottomMargin = if (showEmojiHeader) context.dp(4f).toInt() else 0,
         ) or updateLinearLayoutParams(
             view = suggestionStripView,
             width = contentWidth,
             height = LayoutParams.WRAP_CONTENT,
             gravity = contentGravity,
-            bottomMargin = context.dp(4f).toInt(),
+            bottomMargin = if (showSuggestions) context.dp(4f).toInt() else 0,
         ) or updateLinearLayoutParams(
             view = keyboardStage,
             width = contentWidth,
@@ -247,7 +259,7 @@ class KeyboardRootView @JvmOverloads constructor(
     private fun stageWidthForMode(oneHandedMode: OneHandedMode): Int {
         val referenceWidth = if (width > 0) width else resources.displayMetrics.widthPixels
         return when (oneHandedMode) {
-            OneHandedMode.OFF -> (referenceWidth - context.dp(2f) * 2f).toInt()
+            OneHandedMode.OFF -> (referenceWidth - context.dp(1f) * 2f).toInt()
             OneHandedMode.LEFT, OneHandedMode.RIGHT -> (referenceWidth * 0.84f).toInt()
         }
     }
@@ -455,7 +467,7 @@ class KeyboardRootView @JvmOverloads constructor(
     }
 
     private companion object {
-        const val BASE_KEYBOARD_HEIGHT_DP = 256f
+        const val BASE_KEYBOARD_HEIGHT_DP = 262f
         const val DEFAULT_BOTTOM_LIFT_DP = 14f
     }
 }

@@ -66,12 +66,12 @@ class KeyboardToolbarView(context: Context) : HorizontalScrollView(context) {
                 TextView(context).apply {
                     text = item.action.toolbarLabel(oneHandedMode)
                     gravity = Gravity.CENTER
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f)
                     setPadding(
-                        context.dp(12f).toInt(),
-                        context.dp(7f).toInt(),
-                        context.dp(12f).toInt(),
-                        context.dp(7f).toInt(),
+                        context.dp(10f).toInt(),
+                        context.dp(5.5f).toInt(),
+                        context.dp(10f).toInt(),
+                        context.dp(5.5f).toInt(),
                     )
                     setTypeface(typeface, if (isActive) Typeface.BOLD else Typeface.NORMAL)
                     setTextColor(if (isActive) activeLabelColor else labelColor)
@@ -95,14 +95,14 @@ class KeyboardToolbarView(context: Context) : HorizontalScrollView(context) {
 }
 
 private fun ToolbarAction.toolbarLabel(oneHandedMode: OneHandedMode): String = when (this) {
-    ToolbarAction.CLIPBOARD -> "Clipboard"
+    ToolbarAction.CLIPBOARD -> "Clip"
     ToolbarAction.EMOJI -> "Emoji"
-    ToolbarAction.THEMES -> "Themes"
-    ToolbarAction.SETTINGS -> "Settings"
+    ToolbarAction.THEMES -> "Style"
+    ToolbarAction.SETTINGS -> "Prefs"
     ToolbarAction.ONE_HANDED -> when (oneHandedMode) {
         OneHandedMode.OFF -> "One hand"
-        OneHandedMode.LEFT -> "Left mode"
-        OneHandedMode.RIGHT -> "Right mode"
+        OneHandedMode.LEFT -> "Left"
+        OneHandedMode.RIGHT -> "Right"
     }
     ToolbarAction.TRANSLATE -> "Translate"
     ToolbarAction.CALCULATOR -> "Calc"
